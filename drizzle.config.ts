@@ -3,10 +3,7 @@ import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
   out: './drizzle',
-  schema: [
-    './src/database/schemas/**/*.ts',
-    '!./src/database/schemas/index.ts',
-  ],
+  schema: ['./src/database/schemas/**/*.schema.ts'],
   dialect: 'mysql',
   dbCredentials: {
     host: String(process.env.DATABASE_HOST),
