@@ -13,4 +13,5 @@ export default defineConfig({
     database: String(process.env.DATABASE_NAME),
   },
   verbose: process.env.ENVIRONMENT === 'development',
+  casing: 'snake_case',
 });

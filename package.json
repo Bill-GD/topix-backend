@@ -19,7 +19,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config tests/jest-e2e.json",
-    "export:schema": "drizzle-kit export > src/database/migrations/initial_script.sql && node src/database/scripts/clean-schema.js"
+    "schema:export": "node src/database/scripts/make.js && drizzle-kit export > src/database/migrations/initial_script.sql && node src/database/scripts/clean-schema.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
