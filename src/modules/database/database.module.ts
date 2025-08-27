@@ -16,7 +16,7 @@ import { drizzle } from 'drizzle-orm/mysql2';
           password: String(process.env.DATABASE_PASSWORD),
           database: String(process.env.DATABASE_NAME),
         });
-        return drizzle({ client: poolConnection });
+        return drizzle({ client: poolConnection, casing: 'snake_case' });
       },
     },
   ],
