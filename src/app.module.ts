@@ -1,5 +1,6 @@
 import { DatabaseModule } from '@/modules';
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import * as morgan from 'morgan';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -8,4 +9,8 @@ import { AppService } from './app.service';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(morgan('dev')).forRoutes('*');
+  }
+}
