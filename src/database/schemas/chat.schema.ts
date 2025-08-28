@@ -26,16 +26,19 @@ export const chatChannelTable = mysqlTable(
 export const chatMessageTable = mysqlTable(
   Tables.chatMessage,
   {
-    channelId: int('channel_id').references(() => chatChannelTable.id, {
-      onDelete: 'cascade',
-    }),
+    id: autoId,
+    channelId: int('channel_id')
+      .notNull()
+      .references(() => chatChannelTable.id, {
+        onDelete: 'cascade',
+      }),
     userId: int('user_id').references(() => userTable.id, {
       onDelete: 'set null',
     }),
     content: text().notNull(),
     sentAt: timestamps.dateCreated('sent_at'),
   },
-  (t) => [primaryKey({ columns: [t.channelId, t.userId] })],
+  (t) => [unique().on(t.channelId, t.userId)],
 );
 
 export const channelLastSeenTable = mysqlTable(
