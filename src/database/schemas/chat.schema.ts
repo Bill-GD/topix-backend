@@ -13,8 +13,12 @@ export const chatChannelTable = mysqlTable(
   Tables.chatChannel,
   {
     id: autoId,
-    firstUser: int().references(() => userTable.id, { onDelete: 'set null' }),
-    secondUser: int().references(() => userTable.id, { onDelete: 'set null' }),
+    firstUser: int('first_user').references(() => userTable.id, {
+      onDelete: 'set null',
+    }),
+    secondUser: int('second_user').references(() => userTable.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => [unique().on(t.firstUser, t.secondUser)],
 );
@@ -22,12 +26,14 @@ export const chatChannelTable = mysqlTable(
 export const chatMessageTable = mysqlTable(
   Tables.chatMessage,
   {
-    channelId: int().references(() => chatChannelTable.id, {
+    channelId: int('channel_id').references(() => chatChannelTable.id, {
       onDelete: 'cascade',
     }),
-    userId: int().references(() => userTable.id, { onDelete: 'set null' }),
+    userId: int('user_id').references(() => userTable.id, {
+      onDelete: 'set null',
+    }),
     content: text().notNull(),
-    sentAt: timestamps.dateCreated,
+    sentAt: timestamps.dateCreated('sent_at'),
   },
   (t) => [primaryKey({ columns: [t.channelId, t.userId] })],
 );
@@ -35,11 +41,13 @@ export const chatMessageTable = mysqlTable(
 export const channelLastSeenTable = mysqlTable(
   Tables.channelLastSeen,
   {
-    channelId: int().references(() => chatChannelTable.id, {
+    channelId: int('channel_id').references(() => chatChannelTable.id, {
       onDelete: 'cascade',
     }),
-    userId: int().references(() => userTable.id, { onDelete: 'cascade' }),
-    lastSeenAt: timestamps.dateCreated,
+    userId: int('user_id').references(() => userTable.id, {
+      onDelete: 'cascade',
+    }),
+    lastSeenAt: timestamps.dateCreated('last_seen_at'),
   },
   (t) => [primaryKey({ columns: [t.channelId, t.userId] })],
 );

@@ -1,3 +1,4 @@
+import { NotificationActions } from '@/common/utils/types';
 import { userTable } from '@/database/schemas/user.schema';
 import { timestamps } from '@/database/utils/common-columns';
 import { Tables } from '@/database/utils/tables';
@@ -6,10 +7,14 @@ import { mysqlEnum } from 'drizzle-orm/mysql-core/columns/enum';
 
 export const notificationTable = mysqlTable(Tables.notification, {
   id: varchar({ length: 255 }), // <receiverId>:<actionType>:<objectId>
-  receiverId: int().references(() => userTable.id, { onDelete: 'cascade' }),
-  actorId: int().references(() => userTable.id, { onDelete: 'cascade' }),
-  actorCount: int().notNull().default(1),
-  actionType: mysqlEnum(['']).notNull().default(''),
-  objectId: int().notNull(),
-  dateCreated: timestamps.dateCreated,
+  receiverId: int('receiver_id').references(() => userTable.id, {
+    onDelete: 'cascade',
+  }),
+  actorId: int('actor_id').references(() => userTable.id, {
+    onDelete: 'cascade',
+  }),
+  actorCount: int('actor_count').notNull().default(1),
+  actionType: mysqlEnum('action_type', NotificationActions).notNull(),
+  objectId: int('object_id').notNull(),
+  dateCreated: timestamps.dateCreated(),
 });

@@ -11,27 +11,30 @@ import { int, mysqlTable, primaryKey, varchar } from 'drizzle-orm/mysql-core';
 
 export const threadTable = mysqlTable(Tables.thread, {
   id: autoId,
-  ownerId: int()
+  ownerId: int('owner_id')
     .notNull()
     .references(() => userTable.id, { onDelete: 'cascade' }),
-  groupId: int().references(() => groupTable.id, { onDelete: 'cascade' }),
-  tagId: int().references(() => tagTable.id, { onDelete: 'set null' }),
+  groupId: int('group_id').references(() => groupTable.id, {
+    onDelete: 'cascade',
+  }),
+  tagId: int('tag_id').references(() => tagTable.id, { onDelete: 'set null' }),
   title: varchar({ length: 255 }),
-  postCount: int().notNull().default(0),
+  postCount: int('post_count').notNull().default(0),
   visibility,
-  ...timestamps,
+  dateCreated: timestamps.dateCreated(),
+  dateUpdated: timestamps.dateUpdated(),
 });
 
 export const threadFollowTable = mysqlTable(
   Tables.threadFollow,
   {
-    userId: int()
+    userId: int('user_id')
       .notNull()
       .references(() => userTable.id, { onDelete: 'cascade' }),
-    threadId: int()
+    threadId: int('thread_id')
       .notNull()
       .references(() => threadTable.id, { onDelete: 'cascade' }),
-    dateFollowed: timestamps.dateCreated,
+    dateFollowed: timestamps.dateCreated('date_followed'),
   },
   (t) => [primaryKey({ columns: [t.userId, t.threadId] })],
 );
