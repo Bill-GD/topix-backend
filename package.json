@@ -19,7 +19,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config tests/jest-e2e.json",
-    "schema:export": "node src/database/scripts/make.js && drizzle-kit export > src/database/migrations/initial_script.sql && node src/database/scripts/clean-schema.js"
+    "schema:export": "node src/database/scripts/make.js && drizzle-kit export > src/database/migrations/initial_script.sql && node src/database/scripts/clean-schema.js",
+    "schema:gen": "drizzle-kit generate",
+    "schema:migrate": "drizzle-kit generate && drizzle-kit migrate"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -27,6 +29,7 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.0",
+    "bcryptjs": "^3.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cookie-parser": "^1.4.7",
