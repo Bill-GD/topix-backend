@@ -18,7 +18,7 @@ export const threadTable = mysqlTable(Tables.thread, {
     onDelete: 'cascade',
   }),
   tagId: int('tag_id').references(() => tagTable.id, { onDelete: 'set null' }),
-  title: varchar({ length: 255 }),
+  title: varchar({ length: 255 }).notNull(),
   postCount: int('post_count').notNull().default(0),
   visibility,
   dateCreated: timestamps.dateCreated(),

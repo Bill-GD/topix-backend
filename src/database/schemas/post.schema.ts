@@ -33,7 +33,7 @@ export const postTable = mysqlTable(Tables.post, {
   }),
   tagId: int('tag_id').references(() => tagTable.id, { onDelete: 'set null' }),
   content: text().notNull(),
-  inGroupQueue: boolean('in_group_queue').notNull().default(false),
+  groupAccepted: boolean('group_accepted').notNull().default(false),
   visibility,
   dateCreated: timestamps.dateCreated(),
   dateUpdated: timestamps.dateUpdated(),
