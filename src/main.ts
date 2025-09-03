@@ -1,4 +1,5 @@
-import { NestFactory } from '@nestjs/core';
+import { CatchAllExceptionFilter } from '@/common/filters';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import 'dotenv/config';
@@ -23,6 +24,7 @@ async function bootstrap() {
     SwaggerModule.createDocument(app, swaggerConfig),
   );
 
+  app.useGlobalFilters(new CatchAllExceptionFilter(app.get(HttpAdapterHost)));
   await app.listen(port);
 }
 
