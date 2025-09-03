@@ -1,1 +1,1 @@
-export const DatabaseProviderKey = 'D2B';
+export const DatabaseProviderKey = 'DB';
