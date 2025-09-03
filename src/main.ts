@@ -5,6 +5,7 @@ import 'dotenv/config';
 
 async function bootstrap() {
   const port = process.env.PORT ?? 3000;
+  console.log(`[Server]\tLocal: http://localhost:${port}/`);
 
   const app = await NestFactory.create(AppModule, {
     cors: { origin: [`http://localhost:${process.env.CLIENT_PORT}`] },
@@ -22,7 +23,6 @@ async function bootstrap() {
     SwaggerModule.createDocument(app, swaggerConfig),
   );
 
-  console.log(`[Server]\tLocal: http://localhost:${port}/`);
   await app.listen(port);
 }
 
