@@ -1,7 +1,6 @@
 import { NotificationActions } from '@/common/utils/types';
 import { userTable } from '@/database/schemas/user.schema';
-import { timestamps } from '@/database/utils/common-columns';
-import { Tables } from '@/database/utils/tables';
+import { timestamps, Tables } from '@/database/utils';
 import { int, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
 import { mysqlEnum } from 'drizzle-orm/mysql-core/columns/enum';
 

@@ -1,6 +1,5 @@
 import { groupTable } from '@/database/schemas/group.schema';
-import { autoId } from '@/database/utils/common-columns';
-import { Tables } from '@/database/utils/tables';
+import { autoId, Tables } from '@/database/utils';
 import { int, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
 
 export const tagTable = mysqlTable(Tables.tag, {

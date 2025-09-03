@@ -1,29 +1,21 @@
 import { UserRoles } from '@/common/utils/types';
-import { autoId, timestamps } from '@/database/utils/common-columns';
-import { Tables } from '@/database/utils/tables';
+import { autoId, timestamps, Tables } from '@/database/utils';
 import {
-  timestamp,
   int,
   mysqlTable,
   varchar,
   mysqlEnum,
   text,
   primaryKey,
+  boolean,
 } from 'drizzle-orm/mysql-core';
-
-export const unverifiedUserTable = mysqlTable(Tables.unverifiedUser, {
-  email: varchar({ length: 255 }).primaryKey(),
-  otp: varchar({ length: 6 }).notNull(),
-  expiresAt: timestamp('expires_at', { mode: 'date', fsp: 0 })
-    .notNull()
-    .$default(() => new Date(Date.now() + 5 * 60000)),
-});
 
 export const userTable = mysqlTable(Tables.user, {
   id: autoId,
   email: varchar({ length: 255 }).notNull().unique(),
   username: varchar({ length: 255 }).notNull().unique(),
   password: varchar({ length: 60 }).notNull(),
+  verified: boolean().notNull().default(false),
   role: mysqlEnum(UserRoles).notNull().default(UserRoles.user),
   dateCreated: timestamps.dateCreated(),
   dateUpdated: timestamps.dateUpdated(),

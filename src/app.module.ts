@@ -1,4 +1,4 @@
-import { DatabaseModule } from '@/modules';
+import { DatabaseModule } from '@/modules/database.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AuthModule } from './modules/auth/auth.module';
 import * as morgan from 'morgan';

@@ -1,9 +1,4 @@
-import {
-  autoId,
-  timestamps,
-  visibility,
-} from '@/database/utils/common-columns';
-import { Tables } from '@/database/utils/tables';
+import { autoId, timestamps, visibility, Tables } from '@/database/utils';
 import { userTable } from '@/database/schemas/user.schema';
 import {
   boolean,

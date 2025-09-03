@@ -13,3 +13,23 @@ export const autoId = int().autoincrement().primaryKey();
 export const visibility = mysqlEnum(VisibilityTypes)
   .notNull()
   .default(VisibilityTypes.public);
+
+export const Tables = {
+  user: 'user',
+  profile: 'profile',
+  follow: 'follow',
+  post: 'post',
+  reaction: 'reaction',
+  media: 'media',
+  mediaTemp: 'media_temp',
+  postStats: 'post_stats',
+  group: 'group',
+  groupMember: 'group_member',
+  tag: 'tag',
+  thread: 'thread',
+  threadFollow: 'thread_follow',
+  notification: 'notification',
+  chatChannel: 'chat_channel',
+  chatMessage: 'chat_message',
+  channelLastSeen: 'channel_last_seen',
+} as const;

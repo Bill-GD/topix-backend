@@ -1,12 +1,7 @@
 import { groupTable } from '@/database/schemas/group.schema';
 import { tagTable } from '@/database/schemas/tag.schema';
 import { userTable } from '@/database/schemas/user.schema';
-import {
-  autoId,
-  timestamps,
-  visibility,
-} from '@/database/utils/common-columns';
-import { Tables } from '@/database/utils/tables';
+import { autoId, timestamps, visibility, Tables } from '@/database/utils';
 import { int, mysqlTable, primaryKey, varchar } from 'drizzle-orm/mysql-core';
 
 export const threadTable = mysqlTable(Tables.thread, {

@@ -1,6 +1,5 @@
 import { userTable } from '@/database/schemas/user.schema';
-import { autoId, timestamps } from '@/database/utils/common-columns';
-import { Tables } from '@/database/utils/tables';
+import { autoId, timestamps, Tables } from '@/database/utils';
 import {
   int,
   mysqlTable,
