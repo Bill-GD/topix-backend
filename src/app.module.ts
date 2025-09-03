@@ -1,10 +1,11 @@
 import { DatabaseModule } from '@/modules';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { AuthModule } from './modules/auth/auth.module';
 import * as morgan from 'morgan';
 
 @Module({
-  imports: [DatabaseModule],
   controllers: [],
+  imports: [DatabaseModule, AuthModule],
   providers: [],
 })
 export class AppModule implements NestModule {
