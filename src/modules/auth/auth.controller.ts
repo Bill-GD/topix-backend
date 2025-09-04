@@ -1,4 +1,5 @@
 import { ApiController } from '@/common/decorators';
+import { UserExistGuard } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { AuthService } from '@/modules/auth/auth.service';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
@@ -6,12 +7,12 @@ import { RegisterDto } from '@/modules/auth/dto/register.dto';
 import {
   BadRequestException,
   Body,
-  ConflictException,
   Controller,
   HttpStatus,
   Param,
   ParseIntPipe,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 
 @Controller('auth')
@@ -19,15 +20,9 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @UseGuards(UserExistGuard('username', 'email'))
   @ApiController('application/x-www-form-urlencoded')
   async register(@Body() dto: RegisterDto) {
-    if (!(await this.authService.usernameAvailable(dto.username))) {
-      throw new ConflictException('Username already taken.');
-    }
-    if (!(await this.authService.emailAvailable(dto.email))) {
-      throw new ConflictException('Email already taken.');
-    }
-
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Password do not match.');
     }

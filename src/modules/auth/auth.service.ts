@@ -31,19 +31,6 @@ export class AuthService {
     return newId;
   }
 
-  async usernameAvailable(username: string): Promise<boolean> {
-    const res = await this.db.$count(
-      userTable,
-      eq(userTable.username, username),
-    );
-    return res < 1;
-  }
-
-  async emailAvailable(email: string): Promise<boolean> {
-    const res = await this.db.$count(userTable, eq(userTable.email, email));
-    return res < 1;
-  }
-
   async sendOTP(id: number, dto?: RegisterDto): Promise<void> {
     const otp = this.crypto.generateOTP();
 
