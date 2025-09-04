@@ -3,7 +3,9 @@ import { int, mysqlEnum, timestamp } from 'drizzle-orm/mysql-core';
 
 export const timestamps = {
   dateCreated: (name?: string) =>
-    timestamp(name ?? 'date_created', { mode: 'date', fsp: 0 }).defaultNow(),
+    timestamp(name ?? 'date_created', { mode: 'date', fsp: 0 })
+      .notNull()
+      .defaultNow(),
   dateUpdated: (name?: string) =>
     timestamp(name ?? 'date_updated', { mode: 'date', fsp: 0 }).onUpdateNow(),
 };

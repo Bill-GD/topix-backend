@@ -27,10 +27,10 @@ export const otpTable = mysqlTable(Tables.otp, {
   userId: int('user_id')
     .notNull()
     .references(() => userTable.id, { onDelete: 'cascade' }),
-  otp: varchar({ length: 6 }).notNull(),
+  otp: varchar({ length: 8 }).notNull(),
   expiresAt: timestamp('expires_at', { mode: 'date', fsp: 0 })
     .notNull()
-    .$default(() => new Date(Date.now() + 5 * 60000)),
+    .$default(() => new Date(Date.now() + 300 * 1000)),
 });
 
 export const profileTable = mysqlTable(Tables.profile, {
