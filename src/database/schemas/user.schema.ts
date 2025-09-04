@@ -8,6 +8,7 @@ import {
   text,
   primaryKey,
   boolean,
+  timestamp,
 } from 'drizzle-orm/mysql-core';
 
 export const userTable = mysqlTable(Tables.user, {
@@ -19,6 +20,17 @@ export const userTable = mysqlTable(Tables.user, {
   role: mysqlEnum(UserRoles).notNull().default(UserRoles.user),
   dateCreated: timestamps.dateCreated(),
   dateUpdated: timestamps.dateUpdated(),
+});
+
+export const otpTable = mysqlTable(Tables.otp, {
+  id: autoId,
+  userId: int('user_id')
+    .notNull()
+    .references(() => userTable.id, { onDelete: 'cascade' }),
+  otp: varchar({ length: 6 }).notNull(),
+  expiresAt: timestamp('expires_at', { mode: 'date', fsp: 0 })
+    .notNull()
+    .$default(() => new Date(Date.now() + 5 * 60000)),
 });
 
 export const profileTable = mysqlTable(Tables.profile, {

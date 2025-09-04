@@ -1,42 +1,37 @@
+import { ApiController } from '@/common/decorators';
+import { ControllerResponse } from '@/common/utils/controller-response';
+import { AuthService } from '@/modules/auth/auth.service';
+import { RegisterDto } from '@/modules/auth/dto/register.dto';
 import {
-  Controller,
-  Get,
-  Post,
+  BadRequestException,
   Body,
-  Patch,
-  Param,
-  Delete,
+  ConflictException,
+  Controller,
+  HttpStatus,
+  Post,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
-  }
+  @Post('register')
+  @ApiController('application/x-www-form-urlencoded')
+  async register(@Body() dto: RegisterDto) {
+    if (!(await this.authService.usernameAvailable(dto.username))) {
+      throw new ConflictException('Username not available.');
+    }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
-  }
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('Password do not match.');
+    }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
-  }
+    const res = await this.authService.register(dto);
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+    return ControllerResponse.ok(
+      'User registered successfully',
+      { id: res },
+      HttpStatus.CREATED,
+    );
   }
 }

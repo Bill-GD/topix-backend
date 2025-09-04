@@ -16,6 +16,7 @@ export const visibility = mysqlEnum(VisibilityTypes)
 
 export const Tables = {
   user: 'user',
+  otp: 'otp',
   profile: 'profile',
   follow: 'follow',
   post: 'post',

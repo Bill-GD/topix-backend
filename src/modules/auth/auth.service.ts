@@ -1,30 +1,53 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { userTable } from '@/database/schemas';
+import { CryptoService } from '@/modules/crypto/crypto.service';
+import { MailerService } from '@/modules/mailer/mailer.service';
+import { eq } from 'drizzle-orm';
+import { RegisterDto } from './dto/register.dto';
 import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
-  constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
+  constructor(
+    @Inject(DatabaseProviderKey) private readonly db: DBType,
+    private readonly mailer: MailerService,
+    private readonly crypto: CryptoService,
+  ) {}
 
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  async register(dto: RegisterDto) {
+    dto.password = this.crypto.hashPassword(dto.password);
+
+    const res = await this.db
+      .insert(userTable)
+      .values({
+        email: dto.email,
+        username: dto.username,
+        password: dto.password,
+      })
+      .$returningId();
+
+    console.log(res);
+
+    this.mailer.sendMail(
+      dto.username,
+      dto.email,
+      'Email verification',
+      'email-verify',
+      {
+        username: dto.username,
+        otp: this.crypto.generateOTP(),
+      },
+    );
+
+    return res[0].id;
   }
 
-  findAll() {
-    return `This action returns all auth`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async usernameAvailable(username: string): Promise<boolean> {
+    const res = await this.db.$count(
+      userTable,
+      eq(userTable.username, username),
+    );
+    return res < 1;
   }
 }
