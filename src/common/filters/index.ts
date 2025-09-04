@@ -1,1 +1,1 @@
-export { CatchAllExceptionFilter } from './exception.filter';
+export { CatchEverythingFilter } from './catch-all.filter';

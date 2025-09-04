@@ -1,4 +1,5 @@
-import { CatchAllExceptionFilter } from '@/common/filters';
+import { CatchEverythingFilter } from '@/common/filters';
+import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -20,11 +21,21 @@ async function bootstrap() {
     )
     .setVersion(process.env.npm_package_version ?? '0.0.1')
     .build();
-  SwaggerModule.setup('api-docs', app, () =>
+
+  SwaggerModule.setup(
+    'api-docs',
+    app,
     SwaggerModule.createDocument(app, swaggerConfig),
+    {
+      swaggerOptions: {
+        defaultModelsExpandDepth: -1,
+      },
+    },
   );
 
-  app.useGlobalFilters(new CatchAllExceptionFilter(app.get(HttpAdapterHost)));
+  app.useGlobalFilters(new CatchEverythingFilter(app.get(HttpAdapterHost)));
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+
   await app.listen(port);
 }
 

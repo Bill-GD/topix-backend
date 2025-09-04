@@ -1,40 +1,49 @@
-import { HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ControllerResponse<T = null> {
+  @ApiProperty({ type: 'boolean' })
+  readonly success: boolean;
+
   @ApiProperty({ type: 'string' })
   readonly message: string;
 
   @ApiProperty({ type: 'number', example: 200 })
   readonly status: number;
 
-  @ApiProperty({ type: 'string' })
-  readonly error: string | null;
+  @ApiProperty()
+  readonly error: string | object | null;
 
   @ApiProperty()
   readonly data: T;
 
   private constructor(
+    success: boolean,
     message: string,
-    data: T,
     status: number,
-    error: string | null,
+    data: T,
+    error: string | object | null,
   ) {
     this.message = message;
     this.data = data;
     this.error = error;
     this.status = status;
+    this.success = success;
   }
 
-  static ok<T>(message: string, data: T, status: HttpStatus = HttpStatus.OK) {
-    return new ControllerResponse(message, data, status, null);
+  static ok<T>(message: string, data: T, status: HttpStatus) {
+    return new ControllerResponse(true, message, status, data, null);
   }
 
-  static fail(
-    message: string,
-    error: Error,
-    status: HttpStatus = HttpStatus.BAD_REQUEST,
-  ) {
-    return new ControllerResponse(message, null, status, error.name);
+  static fail(error: HttpException) {
+    const res = error.getResponse();
+
+    return new ControllerResponse(
+      false,
+      error.message,
+      error.getStatus(),
+      null,
+      typeof res === 'string' ? res : res['message'],
+    );
   }
 }
