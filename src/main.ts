@@ -1,4 +1,5 @@
 import { CatchEverythingFilter } from '@/common/filters';
+import { ResponseStatusInterceptor } from '@/common/interceptors/response-status.interceptor';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -35,6 +36,7 @@ async function bootstrap() {
 
   app.useGlobalFilters(new CatchEverythingFilter(app.get(HttpAdapterHost)));
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalInterceptors(new ResponseStatusInterceptor());
 
   await app.listen(port);
 }

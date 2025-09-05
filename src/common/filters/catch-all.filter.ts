@@ -14,11 +14,10 @@ export class CatchEverythingFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   catch(error: Error, host: ArgumentsHost) {
-    console.log(error.stack);
-
     let exception = error;
 
     if (!(exception instanceof HttpException)) {
+      console.log(error.stack);
       exception = new InternalServerErrorException(error);
     }
 

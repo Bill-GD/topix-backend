@@ -31,10 +31,10 @@ export class AuthService {
     return newId;
   }
 
-  async sendOTP(id: number, dto?: RegisterDto): Promise<void> {
+  async sendOTP(userId: number, dto?: RegisterDto): Promise<void> {
     const otp = this.crypto.generateOTP();
 
-    await this.db.insert(otpTable).values({ userId: id, otp });
+    await this.db.insert(otpTable).values({ userId, otp });
 
     let username = dto?.username ?? '',
       email = dto?.email ?? '';
@@ -46,7 +46,7 @@ export class AuthService {
           email: userTable.email,
         })
         .from(userTable)
-        .where(eq(userTable.id, id))
+        .where(eq(userTable.id, userId))
         .limit(1);
     }
 
@@ -70,7 +70,6 @@ export class AuthService {
       })
       .from(otpTable)
       .where(and(eq(otpTable.userId, userId), eq(otpTable.otp, otp)))
-      .orderBy(desc(otpTable.expiresAt))
       .limit(1);
 
     if (res.length <= 0) {

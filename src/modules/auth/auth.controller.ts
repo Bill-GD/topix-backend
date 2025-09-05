@@ -24,7 +24,7 @@ export class AuthController {
   @ApiController('application/x-www-form-urlencoded')
   async register(@Body() dto: RegisterDto) {
     if (dto.password !== dto.confirmPassword) {
-      throw new BadRequestException('Password do not match.');
+      throw new BadRequestException('Password does not match.');
     }
 
     const newId = await this.authService.register(dto);
@@ -52,8 +52,8 @@ export class AuthController {
 
   @Post('resend/:id')
   @ApiController()
-  async resendOTP(@Param('id', ParseIntPipe) id: number) {
-    await this.authService.sendOTP(id);
+  async resendOTP(@Param('id', ParseIntPipe) userId: number) {
+    await this.authService.sendOTP(userId);
 
     return ControllerResponse.ok(
       'Resent OTP successfully',
