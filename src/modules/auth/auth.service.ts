@@ -3,7 +3,7 @@ import { DBType } from '@/common/utils/types';
 import { otpTable, userTable } from '@/database/schemas';
 import { CryptoService } from '@/modules/crypto/crypto.service';
 import { MailerService } from '@/modules/mailer/mailer.service';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { RegisterDto } from './dto/register.dto';
 import { Inject, Injectable } from '@nestjs/common';
 
@@ -15,7 +15,7 @@ export class AuthService {
     private readonly crypto: CryptoService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<number> {
     dto.password = this.crypto.hashPassword(dto.password);
 
     const [{ id: newId }] = await this.db
