@@ -9,10 +9,11 @@ import {
   ConflictException,
   ExecutionContext,
   Inject,
-  mixin,
+  mixin, NotFoundException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { eq } from 'drizzle-orm';
+import { Exception } from 'handlebars';
 
 export function UserExistGuard(
   shouldExist: boolean,
@@ -43,7 +44,7 @@ export function UserExistGuard(
           throw new ConflictException('Email already taken.');
         }
         if (shouldExist && res <= 0) {
-          throw new ConflictException(`Email doesn't exist.`);
+          throw new NotFoundException(`Email doesn't exist.`);
         }
       }
 
@@ -56,7 +57,7 @@ export function UserExistGuard(
           throw new ConflictException('Username already taken.');
         }
         if (shouldExist && res <= 0) {
-          throw new ConflictException(`Username doesn't exist.`);
+          throw new NotFoundException(`Username doesn't exist.`);
         }
       }
 

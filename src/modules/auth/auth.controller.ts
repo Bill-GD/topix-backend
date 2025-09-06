@@ -13,6 +13,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 
@@ -70,11 +71,15 @@ export class AuthController {
   @UseGuards(UserExistGuard(true, ['username']))
   @ApiController('application/x-www-form-urlencoded')
   async login(@Body() dto: LoginDto) {
-    await this.authService.login(dto);
+    const res = await this.authService.login(dto);
+
+    if (!res.success) {
+      throw new UnauthorizedException(res.message);
+    }
 
     return ControllerResponse.ok(
       'User logged in successfully',
-      null,
+      res.data!,
       HttpStatus.OK,
     );
   }

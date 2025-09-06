@@ -5,6 +5,12 @@ export type DBType = MySql2Database<Record<string, unknown>> & {
   $client: mysql.Pool;
 };
 
+export type JwtUserPayload = {
+  sub: number;
+  username: string;
+  email: string;
+};
+
 export const VisibilityTypes = {
   public: 'public',
   private: 'private',

@@ -1,10 +1,11 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
-import { DBType } from '@/common/utils/types';
+import { DBType, JwtUserPayload } from '@/common/utils/types';
 import { otpTable, userTable } from '@/database/schemas';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { CryptoService } from '@/modules/crypto/crypto.service';
 import { MailerService } from '@/modules/mailer/mailer.service';
+import { JwtService } from '@nestjs/jwt';
 import { and, eq } from 'drizzle-orm';
 import { RegisterDto } from './dto/register.dto';
 import { Inject, Injectable } from '@nestjs/common';
@@ -15,6 +16,7 @@ export class AuthService {
     @Inject(DatabaseProviderKey) private readonly db: DBType,
     private readonly mailer: MailerService,
     private readonly crypto: CryptoService,
+    private readonly jwt: JwtService,
   ) {}
 
   async register(dto: RegisterDto): Promise<number> {
@@ -64,7 +66,7 @@ export class AuthService {
     );
   }
 
-  async checkOTP(otp: string, userId: number): Promise<Result> {
+  async checkOTP(otp: string, userId: number): Promise<Result<null>> {
     const res = await this.db
       .select({
         otp: otpTable.otp,
@@ -80,7 +82,7 @@ export class AuthService {
     if (res[0].expiresAt < new Date(Date.now())) {
       return Result.fail('OTP has expired.');
     }
-    return Result.ok('OTP is correct');
+    return Result.ok('OTP is correct', null);
   }
 
   async confirmUser(id: number): Promise<void> {
@@ -92,5 +94,30 @@ export class AuthService {
     await this.db.delete(otpTable).where(eq(otpTable.userId, id));
   }
 
-  async login(dto: LoginDto): Promise<void> {}
+  async login(dto: LoginDto) {
+    const [user] = await this.db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        email: userTable.email,
+        password: userTable.password,
+      })
+      .from(userTable)
+      .where(eq(userTable.username, dto.username))
+      .limit(1);
+
+    if (!this.crypto.verifyPassword(dto.password, user.password)) {
+      return Result.fail('Password is incorrect.');
+    }
+
+    const payload: JwtUserPayload = {
+      ...user,
+      sub: user.id,
+    };
+
+    return Result.ok('Logged in successfully', {
+      accessToken: this.jwt.sign(payload, { expiresIn: '1d' }),
+      refreshToken: this.jwt.sign(payload, { expiresIn: '2w' }),
+    });
+  }
 }
