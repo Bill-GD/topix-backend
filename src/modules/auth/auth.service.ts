@@ -1,6 +1,8 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
+import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import { otpTable, userTable } from '@/database/schemas';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { CryptoService } from '@/modules/crypto/crypto.service';
 import { MailerService } from '@/modules/mailer/mailer.service';
 import { and, eq } from 'drizzle-orm';
@@ -62,7 +64,7 @@ export class AuthService {
     );
   }
 
-  async checkOTP(otp: string, userId: number): Promise<[boolean, string]> {
+  async checkOTP(otp: string, userId: number): Promise<Result> {
     const res = await this.db
       .select({
         otp: otpTable.otp,
@@ -73,12 +75,12 @@ export class AuthService {
       .limit(1);
 
     if (res.length <= 0) {
-      return [false, 'OTP does not match.'];
+      return Result.fail('OTP does not match.');
     }
     if (res[0].expiresAt < new Date(Date.now())) {
-      return [false, 'OTP has expired.'];
+      return Result.fail('OTP has expired.');
     }
-    return [true, 'OTP is correct'];
+    return Result.ok('OTP is correct');
   }
 
   async confirmUser(id: number): Promise<void> {
@@ -89,4 +91,6 @@ export class AuthService {
 
     await this.db.delete(otpTable).where(eq(otpTable.userId, id));
   }
+
+  async login(dto: LoginDto): Promise<void> {}
 }

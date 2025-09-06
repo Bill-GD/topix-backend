@@ -1,8 +1,10 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
 import { userTable } from '@/database/schemas';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
 import {
+  BadRequestException,
   CanActivate,
   ConflictException,
   ExecutionContext,
@@ -12,21 +14,36 @@ import {
 import { plainToInstance } from 'class-transformer';
 import { eq } from 'drizzle-orm';
 
-export function UserExistGuard(...checks: ('username' | 'email')[]) {
+export function UserExistGuard(
+  shouldExist: boolean,
+  checks: ('username' | 'email')[],
+) {
   class UserExistMixin implements CanActivate {
     constructor(@Inject(DatabaseProviderKey) readonly db: DBType) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
       const req = context.switchToHttp().getRequest<Request>();
-      const dto = plainToInstance(RegisterDto, req.body);
+      const handlerName = context.getHandler().name;
+
+      const dto = plainToInstance(
+        handlerName === 'login' ? LoginDto : RegisterDto,
+        req.body,
+      );
 
       if (checks.includes('email')) {
+        if (!(dto instanceof RegisterDto)) {
+          throw new BadRequestException('DTO is invalid.');
+        }
+
         const res = await this.db.$count(
           userTable,
           eq(userTable.email, dto.email),
         );
-        if (res >= 1) {
+        if (!shouldExist && res >= 1) {
           throw new ConflictException('Email already taken.');
+        }
+        if (shouldExist && res <= 0) {
+          throw new ConflictException(`Email doesn't exist.`);
         }
       }
 
@@ -35,8 +52,11 @@ export function UserExistGuard(...checks: ('username' | 'email')[]) {
           userTable,
           eq(userTable.username, dto.username),
         );
-        if (res >= 1) {
+        if (!shouldExist && res >= 1) {
           throw new ConflictException('Username already taken.');
+        }
+        if (shouldExist && res <= 0) {
+          throw new ConflictException(`Username doesn't exist.`);
         }
       }
 

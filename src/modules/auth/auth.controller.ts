@@ -2,6 +2,7 @@ import { ApiController } from '@/common/decorators';
 import { UserExistGuard } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { AuthService } from '@/modules/auth/auth.service';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
 import {
@@ -20,7 +21,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @UseGuards(UserExistGuard('username', 'email'))
+  @UseGuards(UserExistGuard(false, ['username', 'email']))
   @ApiController('application/x-www-form-urlencoded')
   async register(@Body() dto: RegisterDto) {
     if (dto.password !== dto.confirmPassword) {
@@ -42,7 +43,10 @@ export class AuthController {
     @Param('id', ParseIntPipe) userId: number,
     @Body() dto: OtpDto,
   ) {
-    const [success, message] = await this.authService.checkOTP(dto.otp, userId);
+    const { success, message } = await this.authService.checkOTP(
+      dto.otp,
+      userId,
+    );
 
     if (!success) throw new BadRequestException(message);
     await this.authService.confirmUser(userId);
@@ -57,6 +61,19 @@ export class AuthController {
 
     return ControllerResponse.ok(
       'Resent OTP successfully',
+      null,
+      HttpStatus.OK,
+    );
+  }
+
+  @Post('login')
+  @UseGuards(UserExistGuard(true, ['username']))
+  @ApiController('application/x-www-form-urlencoded')
+  async login(@Body() dto: LoginDto) {
+    await this.authService.login(dto);
+
+    return ControllerResponse.ok(
+      'User logged in successfully',
       null,
       HttpStatus.OK,
     );

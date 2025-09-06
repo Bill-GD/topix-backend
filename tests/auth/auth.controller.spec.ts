@@ -1,3 +1,5 @@
+import { UserExistGuard } from '@/common/guards';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
 import { CryptoModule } from '@/modules/crypto/crypto.module';
@@ -11,6 +13,7 @@ import { AuthService } from '@/modules/auth/auth.service';
 describe('AuthController', () => {
   let controller: AuthController;
   let service: AuthService;
+  const loginGuard = UserExistGuard(true, ['username']);
 
   const registerDto: RegisterDto = {
     email: 'test@gmail.com',
@@ -18,15 +21,21 @@ describe('AuthController', () => {
     password: 'password',
     confirmPassword: 'password',
   };
-
   const otpDto: OtpDto = { otp: '123456ab' };
+  const loginDto: LoginDto = {
+    username: 'test',
+    password: 'password',
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [AuthService],
       imports: [DatabaseModule, MailerModule, CryptoModule],
-    }).compile();
+    })
+      .overrideGuard(loginGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get(AuthController);
     service = module.get(AuthService);
@@ -73,4 +82,18 @@ describe('AuthController', () => {
     expect(res.data).toBe(null);
     expect(res.status).toBe(HttpStatus.OK);
   });
+
+  it('should sign user in correctly', async () => {
+    const func = jest.spyOn(service, 'login').mockResolvedValue();
+
+    const res = await controller.login(loginDto);
+
+    expect(func).toHaveBeenCalledWith(loginDto);
+    expect(res.success).toBe(true);
+    expect(res.data).toHaveProperty('accessToken');
+    expect(res.data).toHaveProperty('refreshToken');
+    expect(res.status).toBe(HttpStatus.OK);
+  });
+
+  afterEach(() => jest.clearAllMocks());
 });
