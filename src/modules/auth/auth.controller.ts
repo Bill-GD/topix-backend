@@ -1,6 +1,9 @@
 import { ApiController } from '@/common/decorators';
-import { UserExistGuard } from '@/common/guards';
-import { UserVerifiedGuard } from '@/common/guards/user-verified.guard';
+import {
+  AccountInfoGuard,
+  UserExistGuard,
+  UserVerifiedGuard,
+} from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { AuthService } from '@/modules/auth/auth.service';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
@@ -23,7 +26,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @UseGuards(UserExistGuard(false, ['username', 'email']))
+  @UseGuards(AccountInfoGuard(false, ['username', 'email']))
   @ApiController('application/x-www-form-urlencoded')
   async register(@Body() dto: RegisterDto) {
     if (dto.password !== dto.confirmPassword) {
@@ -40,7 +43,7 @@ export class AuthController {
   }
 
   @Post('confirm/:id')
-  @UseGuards(UserExistGuard(true, ['id']), UserVerifiedGuard)
+  @UseGuards(UserExistGuard('id'), UserVerifiedGuard)
   @ApiController()
   async confirmOTP(
     @Param('id', ParseIntPipe) userId: number,
@@ -58,7 +61,7 @@ export class AuthController {
   }
 
   @Post('resend/:id')
-  @UseGuards(UserExistGuard(true, ['id']), UserVerifiedGuard)
+  @UseGuards(UserExistGuard('id'), UserVerifiedGuard)
   @ApiController()
   async resendOTP(@Param('id', ParseIntPipe) userId: number) {
     await this.authService.sendOTP(userId);
@@ -71,7 +74,7 @@ export class AuthController {
   }
 
   @Post('login')
-  @UseGuards(UserExistGuard(true, ['username']))
+  @UseGuards(AccountInfoGuard(true, ['username']))
   @ApiController('application/x-www-form-urlencoded')
   async login(@Body() dto: LoginDto) {
     const res = await this.authService.login(dto);

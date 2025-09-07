@@ -111,6 +111,7 @@ export class AuthService {
         username: userTable.username,
         email: userTable.email,
         password: userTable.password,
+        role: userTable.role,
       })
       .from(userTable)
       .where(eq(userTable.username, dto.username))

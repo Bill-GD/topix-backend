@@ -1,77 +1,45 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
 import { userTable } from '@/database/schemas';
-import { LoginDto } from '@/modules/auth/dto/login.dto';
-import { RegisterDto } from '@/modules/auth/dto/register.dto';
 import {
-  BadRequestException,
   CanActivate,
-  ConflictException,
   ExecutionContext,
   Inject,
   mixin,
   NotFoundException,
 } from '@nestjs/common';
-import { plainToInstance } from 'class-transformer';
 import { eq } from 'drizzle-orm';
 import { Request } from 'express';
 
-export function UserExistGuard(
-  shouldExist: boolean,
-  checks: ('id' | 'username' | 'email')[],
-) {
+/**
+ * Checks whether the request param actually points to an existing user.
+ * @param check What to check in the param
+ */
+export function UserExistGuard(check: 'id' | 'username') {
   class UserExistMixin implements CanActivate {
     constructor(@Inject(DatabaseProviderKey) readonly db: DBType) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
       const req = context.switchToHttp().getRequest<Request>();
-      const handlerName = context.getHandler().name;
+      let count = 0;
 
-      const dto = plainToInstance(
-        handlerName === 'login' ? LoginDto : RegisterDto,
-        req.body,
-      );
-
-      if (checks.includes('email')) {
-        if (!(dto instanceof RegisterDto)) {
-          throw new BadRequestException('DTO is invalid.');
-        }
-
-        const res = await this.db.$count(
+      if (check === 'username') {
+        count = await this.db.$count(
           userTable,
-          eq(userTable.email, dto.email),
+          eq(userTable.username, req.params.username),
         );
-        if (!shouldExist && res >= 1) {
-          throw new ConflictException('Email already taken.');
-        }
-        if (shouldExist && res <= 0) {
-          throw new NotFoundException(`Email doesn't exist.`);
-        }
       }
 
-      if (checks.includes('username')) {
-        const res = await this.db.$count(
-          userTable,
-          eq(userTable.username, dto.username),
-        );
-        if (!shouldExist && res >= 1) {
-          throw new ConflictException('Username already taken.');
-        }
-        if (shouldExist && res <= 0) {
-          throw new NotFoundException(`Username doesn't exist.`);
-        }
-      }
-
-      if (checks.includes('id') && !isNaN(Number(req.params.id))) {
-        const res = await this.db.$count(
+      if (check === 'id' && !isNaN(Number(req.params.id))) {
+        count = await this.db.$count(
           userTable,
           eq(userTable.id, Number(req.params.id)),
         );
-        if (shouldExist && res <= 0) {
-          throw new NotFoundException(`User doesn't exist.`);
-        }
       }
 
+      if (count <= 0) {
+        throw new NotFoundException(`User doesn't exist.`);
+      }
       return true;
     }
   }

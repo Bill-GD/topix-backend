@@ -22,9 +22,9 @@ import * as process from 'node:process';
       },
     }),
     DatabaseModule,
-    AuthModule,
     MailerModule,
     CryptoModule,
+    AuthModule,
   ],
   providers: [],
 })

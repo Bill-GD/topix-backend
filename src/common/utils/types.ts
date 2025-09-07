@@ -9,6 +9,7 @@ export type JwtUserPayload = {
   sub: number;
   username: string;
   email: string;
+  role: 'user' | 'admin';
 };
 
 export const VisibilityTypes = {
