@@ -1,10 +1,10 @@
+import 'dotenv/config';
 import { CatchEverythingFilter } from '@/common/filters';
 import { ResponseStatusInterceptor } from '@/common/interceptors/response-status.interceptor';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import 'dotenv/config';
 
 async function bootstrap() {
   const port = process.env.PORT ?? 3000;

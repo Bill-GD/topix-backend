@@ -121,14 +121,22 @@ export class AuthService {
       return Result.fail('Password is incorrect.');
     }
 
-    const payload: JwtUserPayload = {
-      ...user,
+    const payload: Omit<JwtUserPayload, 'type'> = {
       sub: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
     };
 
     return Result.ok('Logged in successfully', {
-      accessToken: this.jwt.sign(payload, { expiresIn: '1d' }),
-      refreshToken: this.jwt.sign(payload, { expiresIn: '2w' }),
+      accessToken: this.jwt.sign(
+        { ...payload, type: 'access' },
+        { expiresIn: '1d' },
+      ),
+      refreshToken: this.jwt.sign(
+        { ...payload, type: 'refresh' },
+        { expiresIn: '2w' },
+      ),
     });
   }
 }

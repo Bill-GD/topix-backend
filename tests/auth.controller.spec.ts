@@ -1,4 +1,4 @@
-import { UserExistGuard } from '@/common/guards';
+import { AccountInfoGuard } from '@/common/guards';
 import { Result } from '@/common/utils/result';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
@@ -19,7 +19,7 @@ import { AuthService } from '@/modules/auth/auth.service';
 describe('AuthController', () => {
   let controller: AuthController;
   let service: AuthService;
-  const loginGuard = UserExistGuard(true, ['username']);
+  const loginGuard = AccountInfoGuard(true, ['username']);
 
   const registerDto: RegisterDto = {
     email: 'test@gmail.com',

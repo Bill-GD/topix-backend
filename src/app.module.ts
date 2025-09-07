@@ -2,6 +2,7 @@ import { AuthModule } from '@/modules/auth/auth.module';
 import { CryptoModule } from '@/modules/crypto/crypto.module';
 import { DatabaseModule } from '@/modules/database.module';
 import { MailerModule } from '@/modules/mailer/mailer.module';
+import { UserModule } from '@/modules/user/user.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -13,7 +14,7 @@ import * as process from 'node:process';
   imports: [
     JwtModule.register({
       global: true,
-      secret: `${process.env.JWT_SECRET}`,
+      secret: process.env.JWT_SECRET,
     }),
     ServeStaticModule.forRoot({
       rootPath: `${__dirname}/../public`,
@@ -25,6 +26,7 @@ import * as process from 'node:process';
     MailerModule,
     CryptoModule,
     AuthModule,
+    UserModule,
   ],
   providers: [],
 })
