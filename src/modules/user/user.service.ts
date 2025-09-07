@@ -1,6 +1,8 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
+import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import { profileTable, userTable } from '@/database/schemas';
+import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 
@@ -25,5 +27,13 @@ export class UserService {
       .where(eq(userTable.username, username));
 
     return user;
+  }
+
+  async updateProfileInfo(dto: UpdateProfileDto): Promise<Result<null>> {
+    return Result.ok('Success', null);
+  }
+
+  async deleteUser(username: string): Promise<Result<null>> {
+    return Result.ok('Success', null);
   }
 }

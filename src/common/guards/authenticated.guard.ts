@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { JsonWebTokenError, JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
-import * as process from 'node:process';
 
 @Injectable()
 export class AuthenticatedGuard implements CanActivate {
@@ -21,7 +20,7 @@ export class AuthenticatedGuard implements CanActivate {
 
     const authToken = req.headers.authorization.split(' ')[1];
     try {
-      this.jwt.verify(authToken, { secret: `${process.env.JWT_SECRET}` });
+      this.jwt.verify(authToken);
     } catch (err) {
       if (err instanceof JsonWebTokenError) {
         throw new UnauthorizedException(err.message);

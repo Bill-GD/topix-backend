@@ -9,7 +9,7 @@ export type JwtUserPayload = {
   sub: number;
   username: string;
   email: string;
-  role: 'user' | 'admin';
+  role: keyof typeof UserRoles;
   type: 'access' | 'refresh';
 };
 
