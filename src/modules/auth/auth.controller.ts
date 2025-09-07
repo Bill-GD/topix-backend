@@ -1,5 +1,6 @@
 import { ApiController } from '@/common/decorators';
 import { UserExistGuard } from '@/common/guards';
+import { UserVerifiedGuard } from '@/common/guards/user-verified.guard';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { AuthService } from '@/modules/auth/auth.service';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
@@ -39,6 +40,7 @@ export class AuthController {
   }
 
   @Post('confirm/:id')
+  @UseGuards(UserExistGuard(true, ['id']), UserVerifiedGuard)
   @ApiController()
   async confirmOTP(
     @Param('id', ParseIntPipe) userId: number,
@@ -56,6 +58,7 @@ export class AuthController {
   }
 
   @Post('resend/:id')
+  @UseGuards(UserExistGuard(true, ['id']), UserVerifiedGuard)
   @ApiController()
   async resendOTP(@Param('id', ParseIntPipe) userId: number) {
     await this.authService.sendOTP(userId);

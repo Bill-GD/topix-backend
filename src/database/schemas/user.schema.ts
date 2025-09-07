@@ -40,7 +40,7 @@ export const profileTable = mysqlTable(Tables.profile, {
     .unique()
     .references(() => userTable.id, { onDelete: 'cascade' }),
   displayName: varchar('display_name', { length: 255 }).notNull(),
-  description: text().notNull().default(''),
+  description: text(),
   profilePicture: text('profile_picture'),
   followerCount: int('follower_count').notNull().default(0),
   followingCount: int('following_count').notNull().default(0),

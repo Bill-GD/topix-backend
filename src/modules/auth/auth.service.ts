@@ -1,7 +1,7 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType, JwtUserPayload } from '@/common/utils/types';
-import { otpTable, userTable } from '@/database/schemas';
+import { otpTable, profileTable, userTable } from '@/database/schemas';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { CryptoService } from '@/modules/crypto/crypto.service';
 import { MailerService } from '@/modules/mailer/mailer.service';
@@ -92,6 +92,16 @@ export class AuthService {
       .where(eq(userTable.id, id));
 
     await this.db.delete(otpTable).where(eq(otpTable.userId, id));
+
+    const [user] = await this.db
+      .select({ username: userTable.username })
+      .from(userTable)
+      .where(eq(userTable.id, id));
+
+    await this.db.insert(profileTable).values({
+      userId: id,
+      displayName: user.username,
+    });
   }
 
   async login(dto: LoginDto) {

@@ -9,15 +9,16 @@ import {
   ConflictException,
   ExecutionContext,
   Inject,
-  mixin, NotFoundException,
+  mixin,
+  NotFoundException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { eq } from 'drizzle-orm';
-import { Exception } from 'handlebars';
+import { Request } from 'express';
 
 export function UserExistGuard(
   shouldExist: boolean,
-  checks: ('username' | 'email')[],
+  checks: ('id' | 'username' | 'email')[],
 ) {
   class UserExistMixin implements CanActivate {
     constructor(@Inject(DatabaseProviderKey) readonly db: DBType) {}
@@ -58,6 +59,16 @@ export function UserExistGuard(
         }
         if (shouldExist && res <= 0) {
           throw new NotFoundException(`Username doesn't exist.`);
+        }
+      }
+
+      if (checks.includes('id') && !isNaN(Number(req.params.id))) {
+        const res = await this.db.$count(
+          userTable,
+          eq(userTable.id, Number(req.params.id)),
+        );
+        if (shouldExist && res <= 0) {
+          throw new NotFoundException(`User doesn't exist.`);
         }
       }
 
