@@ -129,13 +129,11 @@ export class AuthService {
     };
 
     return Result.ok('Logged in successfully', {
-      accessToken: this.jwt.sign(
-        { ...payload, type: 'access' },
-        { expiresIn: '1d' },
+      accessToken: this.crypto.encrypt(
+        this.jwt.sign({ ...payload, type: 'access' }, { expiresIn: '1d' }),
       ),
-      refreshToken: this.jwt.sign(
-        { ...payload, type: 'refresh' },
-        { expiresIn: '2w' },
+      refreshToken: this.crypto.encrypt(
+        this.jwt.sign({ ...payload, type: 'refresh' }, { expiresIn: '2w' }),
       ),
     });
   }

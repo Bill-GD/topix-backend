@@ -1,18 +1,17 @@
 import 'dotenv/config';
 import { CatchEverythingFilter } from '@/common/filters';
-import { ResponseStatusInterceptor } from '@/common/interceptors/response-status.interceptor';
+import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   console.log(`[Server]\tLocal: http://localhost:${port}/`);
 
-  const app = await NestFactory.create(AppModule, {
-    cors: { origin: [`http://localhost:${process.env.CLIENT_PORT}`] },
-  });
+  const app = await NestFactory.create(AppModule);
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('topix API')
@@ -34,9 +33,15 @@ async function bootstrap() {
     },
   );
 
+  app.enableCors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  });
+  app.use(cookieParser());
+
   app.useGlobalFilters(new CatchEverythingFilter(app.get(HttpAdapterHost)));
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.useGlobalInterceptors(new ResponseStatusInterceptor());
+  app.useGlobalInterceptors(new ResponseInterceptor());
 
   await app.listen(port);
 }
