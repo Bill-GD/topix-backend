@@ -1,6 +1,8 @@
 import { ApiController } from '@/common/decorators';
 import {
   AccountInfoGuard,
+  AuthenticatedGuard,
+  GetRequesterGuard,
   UserExistGuard,
   UserVerifiedGuard,
 } from '@/common/guards';
@@ -13,17 +15,27 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   HttpStatus,
   Param,
   ParseIntPipe,
   Post,
+  Req,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('check')
+  @UseGuards(AuthenticatedGuard)
+  @ApiController()
+  getSelf() {
+    return ControllerResponse.ok('User is authenticated', null, HttpStatus.OK);
+  }
 
   @Post('register')
   @UseGuards(AccountInfoGuard(false, ['username', 'email']))

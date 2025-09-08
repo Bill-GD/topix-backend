@@ -2,6 +2,7 @@ import { ApiController } from '@/common/decorators';
 import {
   AccountOwnerGuard,
   AuthenticatedGuard,
+  GetRequesterGuard,
   UserExistGuard,
 } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
@@ -15,17 +16,34 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Get('me')
+  @UseGuards(AuthenticatedGuard, GetRequesterGuard)
+  @ApiController()
+  async getSelf(@Req() request: Request) {
+    const user = await this.userService.getUserByUsername(
+      request['username'] as string,
+    );
+
+    return ControllerResponse.ok(
+      'Fetched user successfully',
+      user,
+      HttpStatus.OK,
+    );
+  }
+
   @Get(':username')
   @UseGuards(AuthenticatedGuard, UserExistGuard('username'))
   @ApiController()
-  async register(@Param('username') username: string) {
+  async getUser(@Param('username') username: string) {
     const user = await this.userService.getUserByUsername(username);
 
     return ControllerResponse.ok(

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { CatchEverythingFilter } from '@/common/filters';
-import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
+import { ResponseInterceptor } from '@/common/interceptors';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

@@ -1,4 +1,3 @@
-import { CryptoService } from '@/modules/crypto/crypto.service';
 import {
   BadRequestException,
   CanActivate,
@@ -11,10 +10,7 @@ import { Request } from 'express';
 
 @Injectable()
 export class AuthenticatedGuard implements CanActivate {
-  constructor(
-    private readonly jwt: JwtService,
-    private readonly crypto: CryptoService,
-  ) {}
+  constructor(private readonly jwt: JwtService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>();
@@ -26,9 +22,7 @@ export class AuthenticatedGuard implements CanActivate {
       throw new UnauthorizedException('User is not authenticated');
     }
 
-    const authToken = this.crypto.decrypt(
-      req.headers.authorization.split(' ')[1],
-    );
+    const authToken = req.headers.authorization.split(' ')[1];
     try {
       this.jwt.verify(authToken);
     } catch (err) {

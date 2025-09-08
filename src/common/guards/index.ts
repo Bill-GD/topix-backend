@@ -4,3 +4,4 @@ export { UserVerifiedGuard } from './user-verified.guard';
 export { AuthenticatedGuard } from './authenticated.guard';
 export { AccountOwnerGuard } from './account-owner.guard';
 export { ResourceOwnerGuard } from './resource-owner.guard';
+export { GetRequesterGuard } from './get-requester.guard';

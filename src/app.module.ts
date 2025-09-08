@@ -1,3 +1,4 @@
+import { DecryptTokenMiddleware } from '@/common/middlewares';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { CryptoModule } from '@/modules/crypto/crypto.module';
 import { DatabaseModule } from '@/modules/database.module';
@@ -33,5 +34,6 @@ import * as process from 'node:process';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(morgan('dev')).forRoutes('*');
+    consumer.apply(DecryptTokenMiddleware).forRoutes('*');
   }
 }
