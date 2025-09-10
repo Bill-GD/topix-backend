@@ -1,1 +1,1 @@
-export * from './decrypt-token.middleware';
+export { DecryptTokenMiddleware } from './decrypt-token.middleware';

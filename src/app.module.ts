@@ -1,5 +1,7 @@
 import { DecryptTokenMiddleware } from '@/common/middlewares';
+import { CloudinaryProviderKey } from '@/common/utils/constants';
 import { AuthModule } from '@/modules/auth/auth.module';
+import { CloudinaryModule } from '@/modules/cloudinary.module';
 import { CryptoModule } from '@/modules/crypto/crypto.module';
 import { DatabaseModule } from '@/modules/database.module';
 import { FileModule } from '@/modules/file/file.module';
@@ -24,6 +26,7 @@ import * as process from 'node:process';
     //   },
     // }),
     DatabaseModule,
+    CloudinaryModule,
     MailerModule,
     CryptoModule,
     AuthModule,

@@ -4,6 +4,7 @@ import { ResponseInterceptor } from '@/common/interceptors';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { v2 as cloudinary } from 'cloudinary';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -32,6 +33,12 @@ async function bootstrap() {
       },
     },
   );
+
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
 
   app.enableCors({
     origin: process.env.CLIENT_URL,
