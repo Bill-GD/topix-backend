@@ -23,12 +23,12 @@ import {
 import { Request } from 'express';
 
 @Controller('user')
+@ApiController()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('me')
   @UseGuards(AuthenticatedGuard, GetRequesterGuard)
-  @ApiController()
   async getSelf(@Req() request: Request) {
     const user = await this.userService.getUserById(
       request['userId'] as number,
@@ -43,7 +43,6 @@ export class UserController {
 
   @Get(':username')
   @UseGuards(AuthenticatedGuard, UserExistGuard('username'))
-  @ApiController()
   async getUser(@Param('username') username: string) {
     const user = await this.userService.getUserByUsername(username);
 
@@ -55,18 +54,8 @@ export class UserController {
   }
 
   @Patch('me')
-  @UseGuards(
-    AuthenticatedGuard,
-    GetRequesterGuard,
-    // UserExistGuard('username'),
-    // AccountOwnerGuard(false),
-  )
-  @ApiController()
-  async updateProfile(
-    // @Param('username') username: string,
-    @Req() request: Request,
-    @Body() dto: UpdateProfileDto,
-  ) {
+  @UseGuards(AuthenticatedGuard, GetRequesterGuard)
+  async updateProfile(@Req() request: Request, @Body() dto: UpdateProfileDto) {
     const res = await this.userService.updateProfileInfo(
       request['userId'] as number,
       dto,
@@ -90,7 +79,6 @@ export class UserController {
     AccountOwnerGuard(true),
     // ResourceOwnerGuard('username', userTable, userTable.id, true),
   )
-  @ApiController()
   async deleteProfile(@Param('username') username: string) {
     await this.userService.deleteUser(username);
 

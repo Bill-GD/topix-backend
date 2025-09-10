@@ -1,6 +1,7 @@
 import { ControllerResponse } from '@/common/utils/controller-response';
-import { applyDecorators } from '@nestjs/common';
-import { ApiConsumes, ApiResponse } from '@nestjs/swagger';
+import { applyDecorators, Type, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
@@ -11,6 +12,15 @@ export function ApiController(...extraMimeTypes: string[]) {
   return applyDecorators(
     ApiConsumes('application/json', ...extraMimeTypes),
     ApiResponse({ type: ControllerResponse }),
+  );
+}
+
+export function ApiFile(fieldname: string, dtoType: Type) {
+  return applyDecorators(
+    ApiConsumes('multipart/form-data'),
+    ApiResponse({ type: ControllerResponse }),
+    ApiBody({ type: dtoType }),
+    UseInterceptors(FileInterceptor(fieldname)),
   );
 }
 

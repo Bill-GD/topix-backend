@@ -27,12 +27,12 @@ import {
 } from '@nestjs/common';
 
 @Controller('auth')
+@ApiController()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('password-check')
   @UseGuards(AuthenticatedGuard, GetRequesterGuard)
-  @ApiController()
   async checkPassword(@Req() request: Request, @Body() body: PasswordCheckDto) {
     if (
       !(await this.authService.checkPassword(request['userId'], body.password))
@@ -44,7 +44,6 @@ export class AuthController {
 
   @Post('register')
   @UseGuards(AccountInfoGuard(false, ['username', 'email']))
-  @ApiController('application/x-www-form-urlencoded')
   async register(@Body() dto: RegisterDto) {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Password does not match.');
@@ -61,7 +60,6 @@ export class AuthController {
 
   @Post('confirm/:id')
   @UseGuards(UserExistGuard('id'), UserVerifiedGuard)
-  @ApiController()
   async confirmOTP(
     @Param('id', ParseIntPipe) userId: number,
     @Body() dto: OtpDto,
@@ -79,7 +77,6 @@ export class AuthController {
 
   @Post('resend/:id')
   @UseGuards(UserExistGuard('id'), UserVerifiedGuard)
-  @ApiController()
   async resendOTP(@Param('id', ParseIntPipe) userId: number) {
     await this.authService.sendOTP(userId);
 
@@ -92,7 +89,6 @@ export class AuthController {
 
   @Post('login')
   @UseGuards(AccountInfoGuard(true, ['username']))
-  @ApiController('application/x-www-form-urlencoded')
   async login(@Body() dto: LoginDto) {
     const res = await this.authService.login(dto);
 
