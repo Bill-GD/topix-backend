@@ -1,6 +1,8 @@
 import { ApiController } from '@/common/decorators';
 import {
   AccountInfoGuard,
+  AuthenticatedGuard,
+  GetRequesterGuard,
   UserExistGuard,
   UserVerifiedGuard,
 } from '@/common/guards';
@@ -8,7 +10,9 @@ import { ControllerResponse } from '@/common/utils/controller-response';
 import { AuthService } from '@/modules/auth/auth.service';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
+import { PasswordCheckDto } from '@/modules/auth/dto/password-check.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
+import { Request } from 'express';
 import {
   BadRequestException,
   Body,
@@ -17,6 +21,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Req,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -25,12 +30,17 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // @Get('check')
-  // @UseGuards(AuthenticatedGuard)
-  // @ApiController()
-  // checkToken() {
-  //   return ControllerResponse.ok('User is authenticated', null, HttpStatus.OK);
-  // }
+  @Post('password-check')
+  @UseGuards(AuthenticatedGuard, GetRequesterGuard)
+  @ApiController()
+  async checkPassword(@Req() request: Request, @Body() body: PasswordCheckDto) {
+    if (
+      !(await this.authService.checkPassword(request['userId'], body.password))
+    ) {
+      throw new BadRequestException('Wrong password.');
+    }
+    return ControllerResponse.ok('Password is correct.', null, HttpStatus.OK);
+  }
 
   @Post('register')
   @UseGuards(AccountInfoGuard(false, ['username', 'email']))

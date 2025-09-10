@@ -135,4 +135,13 @@ export class AuthService {
       ),
     });
   }
+
+  async checkPassword(id: number, password: string): Promise<boolean> {
+    const [{ password: hashed }] = await this.db
+      .select({ password: userTable.password })
+      .from(userTable)
+      .where(eq(userTable.id, id));
+
+    return this.crypto.verifyPassword(password, hashed);
+  }
 }
