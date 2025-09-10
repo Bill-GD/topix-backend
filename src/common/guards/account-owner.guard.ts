@@ -1,4 +1,5 @@
 import { JwtUserPayload } from '@/common/utils/types';
+import { UserService } from '@/modules/user/user.service';
 import {
   CanActivate,
   ExecutionContext,
@@ -13,14 +14,19 @@ import { Request } from 'express';
 export function AccountOwnerGuard(allowAdmin: boolean) {
   @Injectable()
   class AccountOwnerMixin implements CanActivate {
-    constructor(readonly jwt: JwtService) {}
+    constructor(
+      readonly jwt: JwtService,
+      readonly userService: UserService,
+    ) {}
 
-    canActivate(context: ExecutionContext): boolean {
+    async canActivate(context: ExecutionContext): Promise<boolean> {
       const req = context.switchToHttp().getRequest<Request>();
 
       // should have authenticated guard before this
       const authToken = req.headers.authorization!.split(' ')[1];
-      const requestedUser = req.params.username;
+      const { id: requestedUser } = await this.userService.getUserByUsername(
+        req.params.username,
+      );
       let user: JwtUserPayload;
 
       try {
@@ -31,7 +37,7 @@ export function AccountOwnerGuard(allowAdmin: boolean) {
           : err;
       }
 
-      if (!allowAdmin && user.username !== requestedUser) {
+      if (!allowAdmin && user.sub !== requestedUser) {
         throw new ForbiddenException(
           'User does not have access to this action.',
         );

@@ -10,6 +10,7 @@ import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { UserService } from '@/modules/user/user.service';
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -29,8 +30,8 @@ export class UserController {
   @UseGuards(AuthenticatedGuard, GetRequesterGuard)
   @ApiController()
   async getSelf(@Req() request: Request) {
-    const user = await this.userService.getUserByUsername(
-      request['username'] as string,
+    const user = await this.userService.getUserById(
+      request['userId'] as number,
     );
 
     return ControllerResponse.ok(
@@ -53,18 +54,27 @@ export class UserController {
     );
   }
 
-  @Patch(':username')
+  @Patch('me')
   @UseGuards(
     AuthenticatedGuard,
-    UserExistGuard('username'),
-    AccountOwnerGuard(false),
+    GetRequesterGuard,
+    // UserExistGuard('username'),
+    // AccountOwnerGuard(false),
   )
   @ApiController()
   async updateProfile(
-    @Param('username') username: string,
+    // @Param('username') username: string,
+    @Req() request: Request,
     @Body() dto: UpdateProfileDto,
   ) {
-    await this.userService.updateProfileInfo(dto);
+    const res = await this.userService.updateProfileInfo(
+      request['userId'] as number,
+      dto,
+    );
+
+    if (!res.success) {
+      throw new ConflictException(res.message);
+    }
 
     return ControllerResponse.ok(
       'User profile updated successfully',

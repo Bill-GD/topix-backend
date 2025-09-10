@@ -7,8 +7,6 @@ export type DBType = MySql2Database<Record<string, unknown>> & {
 
 export type JwtUserPayload = {
   sub: number;
-  username: string;
-  email: string;
   role: keyof typeof UserRoles;
   type: 'access' | 'refresh';
 };

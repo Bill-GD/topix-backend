@@ -1,7 +1,7 @@
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { applyDecorators } from '@nestjs/common';
 import { ApiConsumes, ApiResponse } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
  * Applies several Swagger decorators.
@@ -16,4 +16,8 @@ export function ApiController(...extraMimeTypes: string[]) {
 
 export function IsNotEmptyString() {
   return applyDecorators(IsString(), IsNotEmpty());
+}
+
+export function IsOptionalString() {
+  return applyDecorators(IsString(), IsOptional());
 }

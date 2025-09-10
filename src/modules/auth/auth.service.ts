@@ -123,8 +123,6 @@ export class AuthService {
 
     const payload: Omit<JwtUserPayload, 'type'> = {
       sub: user.id,
-      username: user.username,
-      email: user.email,
       role: user.role,
     };
 
