@@ -19,4 +19,8 @@ export class UpdateProfileDto {
   @ApiProperty()
   @IsOptionalString()
   description?: string;
+
+  @ApiProperty()
+  @IsOptionalString()
+  profilePicture?: string;
 }

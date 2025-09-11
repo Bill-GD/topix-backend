@@ -64,12 +64,13 @@ export class UserService {
         .update(userTable)
         .set({ username: dto.username })
         .where(eq(userTable.id, id));
-    } else if (dto.displayName || dto.description) {
+    } else {
       await this.db
         .update(profileTable)
         .set({
           displayName: dto.displayName,
           description: dto.description,
+          profilePicture: dto.profilePicture,
         })
         .where(eq(profileTable.userId, id));
     }

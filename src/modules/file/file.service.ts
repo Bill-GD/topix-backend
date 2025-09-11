@@ -28,7 +28,7 @@ export class FileService {
     return res;
   }
 
-  async uploadSingle(id: number) {
+  async uploadSingleFromTemp(id: number) {
     const media = await this.getTempMediaById(id);
 
     const res: CloudinaryUploadResponse = await new Promise(
@@ -51,6 +51,37 @@ export class FileService {
 
     await this.db.delete(mediaTempTable).where(eq(mediaTempTable.id, id));
     fs.unlinkSync(getUploadsPath(media.filename));
+
+    return Result.ok('Uploaded successfully', {
+      mediaId: res.public_id,
+      mediaUrl: res.secure_url,
+    });
+  }
+
+  async uploadSingleDirect(media: Express.Multer.File) {
+    const parts = media.originalname.split('.');
+    media.filename = `${Date.now()}.${parts.pop()}`;
+
+    const res: CloudinaryUploadResponse = await new Promise(
+      (resolve, reject) => {
+        this.cloudinary.uploader
+          .upload_stream(
+            {
+              resource_type: media.mimetype.split('/')[0],
+              filename_override: media.filename,
+            },
+            (error, uploadResult) => {
+              if (error)
+                return reject(
+                  new HttpException(error.message, error.http_code),
+                );
+
+              return resolve(uploadResult);
+            },
+          )
+          .end(media.buffer);
+      },
+    );
 
     return Result.ok('Uploaded successfully', {
       mediaId: res.public_id,
