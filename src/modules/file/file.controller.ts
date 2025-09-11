@@ -1,50 +1,58 @@
-import { ApiFile } from '@/common/decorators';
+import { ApiController, ApiFile } from '@/common/decorators';
+import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
-import { UploadImageDto } from '@/modules/file/dto/upload-image.dto';
+import { createFileStorage } from '@/common/utils/multer-storage';
+import { UploadFileLocalDto } from '@/modules/file/dto/upload-file-local.dto';
 import { FileService } from '@/modules/file/file.service';
 import {
+  BadRequestException,
   Controller,
-  FileTypeValidator,
   HttpStatus,
-  MaxFileSizeValidator,
-  ParseFilePipe,
+  Param,
+  ParseIntPipe,
   Post,
+  Req,
   UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
-import { Express } from 'express';
+import { Express, Request } from 'express';
 
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) {}
 
-  @Post('image/single')
-  @ApiFile('image', UploadImageDto)
-  async uploadImage(
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new FileTypeValidator({
-            fileType: 'image/*',
-            fallbackToMimetype: true,
-          }),
-          new MaxFileSizeValidator({
-            message: 'Image too large',
-            maxSize: 1572864, // 1.5MB
-          }),
-        ],
-      }),
-    )
-    image: Express.Multer.File,
+  @Post('local')
+  @UseGuards(AuthenticatedGuard, GetRequesterGuard)
+  @ApiFile('file', UploadFileLocalDto, createFileStorage())
+  async uploadFileLocal(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() request: Request,
   ) {
-    // optional, cloudinary returns unique name anyway
-    const parts = image.originalname.split('.');
-    image.filename = `${Date.now()}.${parts.pop()}`;
+    const res = await this.fileService.saveLocalImage(
+      request['userId'] as number,
+      file,
+    );
 
-    const res = await this.fileService.uploadImage(image);
+    if (!res.success) {
+      throw new BadRequestException(res.message);
+    }
+
+    return ControllerResponse.ok(
+      'File uploaded successfully',
+      { path: `/uploads/${file.filename}` },
+      HttpStatus.CREATED,
+    );
+  }
+
+  @Post('temp/:id/upload')
+  @UseGuards(AuthenticatedGuard)
+  @ApiController()
+  async uploadImage(@Param('id', ParseIntPipe) mediaId: number) {
+    const res = await this.fileService.uploadSingle(mediaId);
 
     return ControllerResponse.ok(
       'Image uploaded successfully',
-      { path: res.data.imageUrl, id: res.data.imageId },
+      { path: res.data.mediaUrl, id: res.data.mediaId },
       HttpStatus.CREATED,
     );
   }

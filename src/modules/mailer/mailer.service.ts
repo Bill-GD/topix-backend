@@ -1,3 +1,4 @@
+import { getDistPath } from '@/common/utils/helpers';
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import hbs from 'handlebars';
@@ -30,7 +31,10 @@ export class MailerService {
     data: Record<string, string>,
   ): void {
     const compiler = hbs.compile(
-      fs.readFileSync(`${__dirname}/../../templates/${template}.hbs`, 'utf-8'),
+      fs.readFileSync(
+        `${getDistPath()}/src/templates/${template}.hbs`,
+        'utf-8',
+      ),
     );
 
     void this.tranport.sendMail({

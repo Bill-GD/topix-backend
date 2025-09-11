@@ -3,7 +3,7 @@ import { groupTable } from '@/database/schemas/group.schema';
 import { tagTable } from '@/database/schemas/tag.schema';
 import { threadTable } from '@/database/schemas/thread.schema';
 import { userTable } from '@/database/schemas/user.schema';
-import { autoId, timestamps, visibility, Tables } from '@/database/utils';
+import { autoId, Tables, timestamps, visibility } from '@/database/utils';
 import { relations } from 'drizzle-orm';
 import {
   boolean,
@@ -11,6 +11,7 @@ import {
   mysqlTable,
   primaryKey,
   text,
+  varchar,
 } from 'drizzle-orm/mysql-core';
 import { mysqlEnum } from 'drizzle-orm/mysql-core/columns/enum';
 
@@ -56,7 +57,7 @@ export const reactionTable = mysqlTable(
 );
 
 export const mediaTable = mysqlTable(Tables.media, {
-  id: autoId,
+  id: varchar({ length: 32 }).primaryKey(), // cloudinary public_id
   postId: int('post_id')
     .notNull()
     .references(() => postTable.id, { onDelete: 'cascade' }),
