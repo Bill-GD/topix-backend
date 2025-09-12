@@ -1,5 +1,6 @@
 import { ApiController, ApiFile } from '@/common/decorators';
 import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import { ImageSizeLimit, VideoSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { createFileStorage } from '@/common/utils/multer-storage';
 import { UploadFileLocalDto } from '@/modules/file/dto/upload-file-local.dto';
@@ -65,12 +66,10 @@ export class FileController {
     const isImage = file.mimetype.includes('image/');
     const isVideo = file.mimetype.includes('video/');
 
-    // 1.5 MB image
-    if (isImage && file.size > 1572864) {
+    if (isImage && file.size > ImageSizeLimit) {
       new BadRequestException('Image too large.');
     }
-    // 256 MB video
-    if (isVideo && file.size > 268435456) {
+    if (isVideo && file.size > VideoSizeLimit) {
       new BadRequestException('Video too large.');
     }
 

@@ -1,3 +1,4 @@
+import { ImageSizeLimit, VideoSizeLimit } from '@/common/utils/constants';
 import { getDistPath } from '@/common/utils/helpers';
 import { BadRequestException } from '@nestjs/common';
 import { diskStorage } from 'multer';
@@ -9,12 +10,10 @@ export function createFileStorage() {
       const isImage = file.mimetype.includes('image/');
       const isVideo = file.mimetype.includes('video/');
 
-      // 1.5 MB image
-      if (isImage && file.size > 1572864) {
+      if (isImage && file.size > ImageSizeLimit) {
         return callback(new BadRequestException('Image too large.'), '');
       }
-      // 256 MB video
-      if (isVideo && file.size > 268435456) {
+      if (isVideo && file.size > VideoSizeLimit) {
         return callback(new BadRequestException('Video too large.'), '');
       }
 
