@@ -1,13 +1,15 @@
+import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import { Result } from '@/common/utils/result';
 import { DatabaseModule } from '@/modules/database.module';
 import { UserController } from '@/modules/user/user.controller';
 import { UserService } from '@/modules/user/user.service';
+import { ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 
 describe('UserController', () => {
   let controller: UserController;
   let service: UserService;
-  // const loginGuard = UserExistGuard(true, ['username']);
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -15,8 +17,10 @@ describe('UserController', () => {
       providers: [UserService, JwtService],
       imports: [DatabaseModule],
     })
-      // .overrideGuard(loginGuard)
-      // .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(AuthenticatedGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(GetRequesterGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 
     controller = module.get(UserController);
@@ -26,6 +30,28 @@ describe('UserController', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
     expect(controller).toBeDefined();
+  });
+
+  // it(`should throw NotFoundException if user doesn't exist`, async () => {
+  //   await expect(
+  //     controller.getUser('an-username_that-should_not-exist_123'),
+  //   ).rejects.toThrow(NotFoundException);
+  //
+  //   await expect(
+  //     controller.deleteProfile('an-username_that-should_not-exist_123'),
+  //   ).rejects.toThrow(NotFoundException);
+  // });
+
+  it(`should throw ConflictException when trying to update to an existing username`, async () => {
+    jest
+      .spyOn(service, 'updateProfileInfo')
+      .mockResolvedValue(Result.fail('Fail'));
+
+    await expect(
+      controller.updateProfile({ userId: 1 } as any, {
+        username: 'existing-name',
+      }),
+    ).rejects.toThrow(ConflictException);
   });
 
   afterEach(() => jest.clearAllMocks());

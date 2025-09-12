@@ -52,13 +52,17 @@ export class UserService {
     id: number,
     dto: UpdateProfileDto,
   ): Promise<Result<null>> {
-    if (dto.username) {
+    const user = await this.getUserById(id);
+
+    if (dto.username && user.username !== dto.username) {
       const count = await this.db.$count(
         userTable,
         eq(userTable.username, dto.username),
       );
 
-      if (count >= 1) return Result.fail('Username is already taken.');
+      if (count >= 1) {
+        return Result.fail('Username is already taken.');
+      }
 
       await this.db
         .update(userTable)
