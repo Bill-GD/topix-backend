@@ -65,15 +65,6 @@ export const mediaTable = mysqlTable(Tables.media, {
   path: text().notNull(),
 });
 
-export const mediaTempTable = mysqlTable(Tables.mediaTemp, {
-  id: autoId,
-  userId: int('user_id')
-    .notNull()
-    .references(() => userTable.id, { onDelete: 'cascade' }),
-  type: mysqlEnum(MediaTypes).notNull(),
-  path: text().notNull(),
-});
-
 export const postStatsTable = mysqlTable(Tables.postStats, {
   id: autoId,
   postId: int('post_id')

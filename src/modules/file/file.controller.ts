@@ -1,56 +1,30 @@
-import { ApiController, ApiFile } from '@/common/decorators';
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import { ApiFile } from '@/common/decorators';
+import { AuthenticatedGuard } from '@/common/guards';
 import { ImageSizeLimit, VideoSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
-import { createFileStorage } from '@/common/utils/multer-storage';
-import { UploadFileLocalDto } from '@/modules/file/dto/upload-file-local.dto';
+import { getReadableSize } from '@/common/utils/helpers';
+import { UploadFileDto } from '@/modules/file/dto/upload-file.dto';
 import { FileService } from '@/modules/file/file.service';
 import {
   BadRequestException,
   Controller,
   FileTypeValidator,
   HttpStatus,
-  Param,
   ParseFilePipe,
-  ParseIntPipe,
   Post,
-  Req,
   UploadedFile,
   UseGuards,
 } from '@nestjs/common';
-import { Express, Request } from 'express';
+import { Express } from 'express';
 
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) {}
 
-  @Post('local')
-  @UseGuards(AuthenticatedGuard, GetRequesterGuard)
-  @ApiFile('file', UploadFileLocalDto, createFileStorage())
-  async uploadFileLocal(
-    @UploadedFile() file: Express.Multer.File,
-    @Req() request: Request,
-  ) {
-    const res = await this.fileService.saveLocalImage(
-      request['userId'] as number,
-      file,
-    );
-
-    if (!res.success) {
-      throw new BadRequestException(res.message);
-    }
-
-    return ControllerResponse.ok(
-      'File uploaded successfully',
-      { path: `/uploads/${file.filename}` },
-      HttpStatus.CREATED,
-    );
-  }
-
-  @Post('cloud')
+  @Post('upload')
   @UseGuards(AuthenticatedGuard)
-  @ApiFile('file', UploadFileLocalDto)
-  async uploadFileCloud(
+  @ApiFile('file', UploadFileDto)
+  async uploadFile(
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -67,13 +41,17 @@ export class FileController {
     const isVideo = file.mimetype.includes('video/');
 
     if (isImage && file.size > ImageSizeLimit) {
-      new BadRequestException('Image too large.');
+      new BadRequestException(
+        `Image size within ${getReadableSize(ImageSizeLimit)}, got ${getReadableSize(file.size)}.`,
+      );
     }
     if (isVideo && file.size > VideoSizeLimit) {
-      new BadRequestException('Video too large.');
+      new BadRequestException(
+        `Video size within ${getReadableSize(VideoSizeLimit)}, got ${getReadableSize(file.size)}.`,
+      );
     }
 
-    const res = await this.fileService.uploadSingleDirect(file);
+    const res = await this.fileService.uploadSingle(file);
 
     if (!res.success) {
       throw new BadRequestException(res.message);
@@ -81,19 +59,6 @@ export class FileController {
 
     return ControllerResponse.ok(
       'File uploaded successfully',
-      { path: res.data.mediaUrl, id: res.data.mediaId },
-      HttpStatus.CREATED,
-    );
-  }
-
-  @Post('temp/:id/upload')
-  @UseGuards(AuthenticatedGuard)
-  @ApiController()
-  async uploadImage(@Param('id', ParseIntPipe) mediaId: number) {
-    const res = await this.fileService.uploadSingleFromTemp(mediaId);
-
-    return ControllerResponse.ok(
-      'Image uploaded successfully',
       { path: res.data.mediaUrl, id: res.data.mediaId },
       HttpStatus.CREATED,
     );
