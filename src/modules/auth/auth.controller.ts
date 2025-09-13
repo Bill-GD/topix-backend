@@ -12,7 +12,6 @@ import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
 import { PasswordCheckDto } from '@/modules/auth/dto/password-check.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
-import { Request } from 'express';
 import {
   BadRequestException,
   Body,
@@ -25,6 +24,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 
 @Controller('auth')
 @ApiController()
@@ -96,10 +96,6 @@ export class AuthController {
       throw new UnauthorizedException(res.message);
     }
 
-    return ControllerResponse.ok(
-      'User logged in successfully',
-      res.data!,
-      HttpStatus.OK,
-    );
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 }

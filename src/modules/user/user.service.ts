@@ -79,7 +79,7 @@ export class UserService {
         .where(eq(profileTable.userId, id));
     }
 
-    return Result.ok('Success', null);
+    return Result.ok('User profile updated successfully', null);
   }
 
   async deleteUser(username: string): Promise<Result<null>> {

@@ -12,10 +12,9 @@ import {
   HttpStatus,
   ParseFilePipe,
   Post,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
-import { Express } from 'express';
 
 @Controller('file')
 export class FileController {
@@ -23,9 +22,9 @@ export class FileController {
 
   @Post('upload')
   @UseGuards(AuthenticatedGuard)
-  @ApiFile('file', UploadFileDto)
-  async uploadFile(
-    @UploadedFile(
+  @ApiFile('files', UploadFileDto)
+  async uploadFiles(
+    @UploadedFiles(
       new ParseFilePipe({
         validators: [
           new FileTypeValidator({
@@ -35,32 +34,30 @@ export class FileController {
         ],
       }),
     )
-    file: Express.Multer.File,
+    files: Array<Express.Multer.File>,
   ) {
-    const isImage = file.mimetype.includes('image/');
-    const isVideo = file.mimetype.includes('video/');
+    for (const file of files) {
+      const isImage = file.mimetype.includes('image/');
+      const isVideo = file.mimetype.includes('video/');
 
-    if (isImage && file.size > ImageSizeLimit) {
-      new BadRequestException(
-        `Image size within ${getReadableSize(ImageSizeLimit)}, got ${getReadableSize(file.size)}.`,
-      );
-    }
-    if (isVideo && file.size > VideoSizeLimit) {
-      new BadRequestException(
-        `Video size within ${getReadableSize(VideoSizeLimit)}, got ${getReadableSize(file.size)}.`,
-      );
+      if (isImage && file.size > ImageSizeLimit) {
+        new BadRequestException(
+          `Image size within ${getReadableSize(ImageSizeLimit)}, got ${getReadableSize(file.size)}.`,
+        );
+      }
+      if (isVideo && file.size > VideoSizeLimit) {
+        new BadRequestException(
+          `Video size within ${getReadableSize(VideoSizeLimit)}, got ${getReadableSize(file.size)}.`,
+        );
+      }
     }
 
-    const res = await this.fileService.uploadSingle(file);
+    const res = await this.fileService.uploadList(files);
 
     if (!res.success) {
       throw new BadRequestException(res.message);
     }
 
-    return ControllerResponse.ok(
-      'File uploaded successfully',
-      { path: res.data.mediaUrl, id: res.data.mediaId },
-      HttpStatus.CREATED,
-    );
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 }

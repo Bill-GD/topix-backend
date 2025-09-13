@@ -65,11 +65,7 @@ export class UserController {
       throw new ConflictException(res.message);
     }
 
-    return ControllerResponse.ok(
-      'User profile updated successfully',
-      null,
-      HttpStatus.OK,
-    );
+    return ControllerResponse.ok(res.message, null, HttpStatus.OK);
   }
 
   @Delete(':username')

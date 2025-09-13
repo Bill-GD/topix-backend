@@ -1,6 +1,6 @@
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { applyDecorators, Type, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
@@ -20,7 +20,7 @@ export function ApiFile(fieldname: string, dtoType: Type) {
     ApiConsumes('multipart/form-data'),
     ApiResponse({ type: ControllerResponse }),
     ApiBody({ type: dtoType }),
-    UseInterceptors(FileInterceptor(fieldname)),
+    UseInterceptors(FilesInterceptor(fieldname)),
   );
 }
 
