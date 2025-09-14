@@ -10,10 +10,6 @@ import {
   IsString,
 } from 'class-validator';
 
-/**
- * Applies several Swagger decorators.
- * @param extraMimeTypes Add more mime types. Consumes `application/json` by default.
- */
 export function ApiController(...extraMimeTypes: string[]) {
   return applyDecorators(
     ApiConsumes('application/json', ...extraMimeTypes),

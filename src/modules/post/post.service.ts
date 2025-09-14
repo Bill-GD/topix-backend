@@ -37,19 +37,19 @@ export class PostService {
     return Result.ok('Post uploaded successfully', postId);
   }
 
-  findAll() {
-    return `This action returns all post`;
+  async findAll() {
+    return Result.ok('Post fetched successfully', null);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} post`;
+  async findOne(id: number) {
+    return Result.ok('Post fetched successfully', null);
   }
 
-  update(id: number, dto: UpdatePostDto) {
-    return `This action updates a #${id} post`;
+  async update(id: number, dto: UpdatePostDto) {
+    return Result.ok('Post updated successfully', null);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} post`;
+  async remove(id: number) {
+    return Result.ok('Post deleted successfully', null);
   }
 }
