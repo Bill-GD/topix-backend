@@ -57,7 +57,7 @@ export const reactionTable = mysqlTable(
 );
 
 export const mediaTable = mysqlTable(Tables.media, {
-  id: varchar({ length: 32 }).primaryKey(), // cloudinary public_id
+  id: varchar({ length: 255 }).primaryKey(), // cloudinary public_id
   postId: int('post_id')
     .notNull()
     .references(() => postTable.id, { onDelete: 'cascade' }),

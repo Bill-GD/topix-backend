@@ -34,15 +34,15 @@ export class FileService {
       },
     );
 
-    return Result.ok('File uploaded successfully', {
-      mediaId: res.public_id,
-      mediaUrl: res.secure_url,
-    });
+    return Result.ok('File uploaded successfully', res.secure_url);
   }
 
   async uploadList(list: Array<Express.Multer.File>) {
     const ops = list.map((file) => this.uploadSingle(file));
     const resList = await Promise.all(ops);
-    return Result.ok('Files uploaded successfully', resList);
+    return Result.ok(
+      'Files uploaded successfully',
+      resList.map((r) => r.data),
+    );
   }
 }

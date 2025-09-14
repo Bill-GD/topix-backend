@@ -47,7 +47,15 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.useGlobalFilters(new CatchEverythingFilter(app.get(HttpAdapterHost)));
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
   app.useGlobalInterceptors(new ResponseInterceptor());
 
   await app.listen(port);

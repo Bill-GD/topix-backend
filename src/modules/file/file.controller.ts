@@ -17,11 +17,11 @@ import {
 } from '@nestjs/common';
 
 @Controller('file')
+@UseGuards(AuthenticatedGuard)
 export class FileController {
   constructor(private readonly fileService: FileService) {}
 
   @Post('upload')
-  @UseGuards(AuthenticatedGuard)
   @ApiFile('files', UploadFileDto)
   async uploadFiles(
     @UploadedFiles(
@@ -41,12 +41,12 @@ export class FileController {
       const isVideo = file.mimetype.includes('video/');
 
       if (isImage && file.size > ImageSizeLimit) {
-        new BadRequestException(
+        throw new BadRequestException(
           `Image size within ${getReadableSize(ImageSizeLimit)}, got ${getReadableSize(file.size)}.`,
         );
       }
       if (isVideo && file.size > VideoSizeLimit) {
-        new BadRequestException(
+        throw new BadRequestException(
           `Video size within ${getReadableSize(VideoSizeLimit)}, got ${getReadableSize(file.size)}.`,
         );
       }

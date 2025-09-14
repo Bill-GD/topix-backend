@@ -2,7 +2,13 @@ import { ControllerResponse } from '@/common/utils/controller-response';
 import { applyDecorators, Type, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiResponse } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from 'class-validator';
 
 /**
  * Applies several Swagger decorators.
@@ -26,6 +32,10 @@ export function ApiFile(fieldname: string, dtoType: Type) {
 
 export function IsNotEmptyString() {
   return applyDecorators(IsString(), IsNotEmpty());
+}
+
+export function IsPositiveNumber() {
+  return applyDecorators(IsPositive(), IsNumber());
 }
 
 export function IsOptionalString() {

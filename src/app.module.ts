@@ -5,6 +5,7 @@ import { CryptoModule } from '@/modules/crypto/crypto.module';
 import { DatabaseModule } from '@/modules/database.module';
 import { FileModule } from '@/modules/file/file.module';
 import { MailerModule } from '@/modules/mailer/mailer.module';
+import { PostModule } from '@/modules/post/post.module';
 import { UserModule } from '@/modules/user/user.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
@@ -25,6 +26,7 @@ import * as process from 'node:process';
     AuthModule,
     UserModule,
     FileModule,
+    PostModule,
   ],
   providers: [],
 })

@@ -23,12 +23,13 @@ import {
 import { Request } from 'express';
 
 @Controller('user')
+@UseGuards(AuthenticatedGuard)
 @ApiController()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('me')
-  @UseGuards(AuthenticatedGuard, GetRequesterGuard)
+  @UseGuards(GetRequesterGuard)
   async getSelf(@Req() request: Request) {
     const user = await this.userService.getUserById(
       request['userId'] as number,
@@ -42,7 +43,7 @@ export class UserController {
   }
 
   @Get(':username')
-  @UseGuards(AuthenticatedGuard, UserExistGuard('username'))
+  @UseGuards(UserExistGuard('username'))
   async getUser(@Param('username') username: string) {
     const user = await this.userService.getUserByUsername(username);
 
@@ -54,7 +55,7 @@ export class UserController {
   }
 
   @Patch('me')
-  @UseGuards(AuthenticatedGuard, GetRequesterGuard)
+  @UseGuards(GetRequesterGuard)
   async updateProfile(@Req() request: Request, @Body() dto: UpdateProfileDto) {
     const res = await this.userService.updateProfileInfo(
       request['userId'] as number,
@@ -70,7 +71,6 @@ export class UserController {
 
   @Delete(':username')
   @UseGuards(
-    AuthenticatedGuard,
     UserExistGuard('username'),
     AccountOwnerGuard(true),
     // ResourceOwnerGuard('username', userTable, userTable.id, true),

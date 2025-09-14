@@ -64,4 +64,3 @@ export type CloudinaryUploadResponse = {
   original_filename: string;
   api_key: string;
 };
-
