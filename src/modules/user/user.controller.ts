@@ -6,6 +6,7 @@ import {
   UserExistGuard,
 } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { PostService } from '@/modules/post/post.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { UserService } from '@/modules/user/user.service';
 import {
@@ -26,7 +27,10 @@ import { Request } from 'express';
 @UseGuards(AuthenticatedGuard)
 @ApiController()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly postService: PostService,
+  ) {}
 
   @Get('me')
   @UseGuards(GetRequesterGuard)
@@ -52,6 +56,15 @@ export class UserController {
       user,
       HttpStatus.OK,
     );
+  }
+
+  @Get(':username/posts')
+  @UseGuards(UserExistGuard('username'))
+  async getUserPosts(@Param('username') username: string) {
+    const user = await this.userService.getUserByUsername(username);
+    const res = await this.postService.findAllOfUser(user.id);
+
+    return ControllerResponse.ok(res.message, res.data.posts, HttpStatus.OK);
   }
 
   @Patch('me')

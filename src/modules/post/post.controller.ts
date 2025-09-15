@@ -8,7 +8,9 @@ import {
   Delete,
   Get,
   HttpStatus,
+  NotFoundException,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -41,8 +43,12 @@ export class PostController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postService.findOne(+id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const res = await this.postService.findOne(id);
+    if (!res.success) {
+      throw new NotFoundException(res.message);
+    }
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
   @Patch(':id')
