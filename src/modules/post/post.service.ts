@@ -112,13 +112,15 @@ export class PostService {
       media: undefined;
     } = { ...res[0], media: undefined, mediaPaths: [] };
 
-    const mediaPaths = res
-      .map((p) => p.media!)
-      .reduce((p: string[], c) => {
-        p.push(c);
-        return p;
-      }, []);
-    post = { ...post, mediaPaths };
+    if (res.length >= 1 && res[0].media) {
+      const mediaPaths = res
+        .map((p) => p.media!)
+        .reduce((p: string[], c) => {
+          p.push(c);
+          return p;
+        }, []);
+      post = { ...post, mediaPaths };
+    }
 
     return Result.ok('Post fetched successfully', post);
   }

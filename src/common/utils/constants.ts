@@ -1,4 +1,4 @@
 export const DatabaseProviderKey = 'DB';
 export const CloudinaryProviderKey = 'CLOUDINARY';
-export const ImageSizeLimit = 1572864; // 1.5 MB
-export const VideoSizeLimit = 268435456; // 256 MB
+export const ImageSizeLimit = 10485760; // 10 MB
+export const VideoSizeLimit = 104857600; // 100 MB

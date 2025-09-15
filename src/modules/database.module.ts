@@ -2,8 +2,8 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
 import * as schema from '@/database/schemas';
 import { Global, Module } from '@nestjs/common';
-import * as mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
+import * as mysql from 'mysql2/promise';
 
 @Global()
 @Module({
