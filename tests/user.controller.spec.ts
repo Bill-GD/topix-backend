@@ -1,6 +1,7 @@
 import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
 import { Result } from '@/common/utils/result';
 import { DatabaseModule } from '@/modules/database.module';
+import { PostModule } from '@/modules/post/post.module';
 import { UserController } from '@/modules/user/user.controller';
 import { UserService } from '@/modules/user/user.service';
 import { ConflictException } from '@nestjs/common';
@@ -15,7 +16,7 @@ describe('UserController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
       providers: [UserService, JwtService],
-      imports: [DatabaseModule],
+      imports: [DatabaseModule, PostModule],
     })
       .overrideGuard(AuthenticatedGuard)
       .useValue({ canActivate: jest.fn(() => true) })

@@ -48,7 +48,7 @@ export class PostController {
     if (!res.success) {
       throw new NotFoundException(res.message);
     }
-    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Patch(':id')

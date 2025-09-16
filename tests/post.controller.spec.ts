@@ -49,10 +49,8 @@ describe('PostController', () => {
   it(`should throw NotFoundException if post doesn't exist`, async () => {
     const func = jest
       .spyOn(service, 'findOne')
-      .mockResolvedValue(Result.ok('Post fetched successfully', null));
-    await expect(controller.findOne('-1111')).rejects.toThrow(
-      NotFoundException,
-    );
-    expect(func).not.toHaveBeenCalled();
+      .mockResolvedValue(Result.fail('Fail'));
+    await expect(controller.findOne(-1111)).rejects.toThrow(NotFoundException);
+    expect(func).toHaveBeenCalled();
   });
 });

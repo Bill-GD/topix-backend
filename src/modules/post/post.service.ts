@@ -1,9 +1,16 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
-import { mediaTable, postStatsTable, postTable } from '@/database/schemas';
+import {
+  mediaTable,
+  postStatsTable,
+  postTable,
+  profileTable,
+  userTable,
+} from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
@@ -45,48 +52,48 @@ export class PostService {
   }
 
   async findAllOfUser(userId: number) {
-    const res = await this.db
+    const posts = await this.db
       .select({
         id: postTable.id,
         content: postTable.content,
         reactionCount: postStatsTable.reactionCount,
         replyCount: postStatsTable.replyCount,
-        media: mediaTable.path,
         dateCreated: postTable.dateCreated,
       })
       .from(postTable)
       .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
-      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
-      .where(eq(postTable.ownerId, userId));
+      .where(eq(postTable.ownerId, userId))
+      .orderBy(desc(postTable.dateCreated))
+      .limit(5);
 
-    const posts: {
-      id: number;
-      content: string;
-      reactionCount: number;
-      replyCount: number;
-      mediaPaths: string[];
-      dateCreated: Date;
-    }[] = Object.values(
-      res.reduce((acc, row) => {
-        if (!acc[row.id]) {
-          acc[row.id] = { ...row, mediaPaths: [] };
-        }
-        if (row.media) {
-          acc[row.id].mediaPaths.push(row.media);
-        }
-        return acc;
-      }, {}),
+    const postIds = posts.map((p) => p.id);
+
+    const medias = await this.db
+      .select({
+        postId: mediaTable.postId,
+        path: mediaTable.path,
+      })
+      .from(mediaTable)
+      .where(inArray(mediaTable.postId, postIds));
+
+    const mediaPaths: string[][] = [];
+
+    for (const postId of postIds) {
+      const m = medias.filter((e) => e.postId === postId).map((e) => e.path);
+      mediaPaths.push(m);
+    }
+
+    return Result.ok(
+      'Fetched user posts successfully',
+      posts.map((p, i) => ({ ...p, mediaPaths: mediaPaths[i] })),
     );
-
-    return Result.ok('Fetched user posts successfully', {
-      posts,
-    });
   }
 
   async findOne(postId: number) {
     const res = await this.db
       .select({
         id: postTable.id,
+        ownerId: postTable.ownerId,
         content: postTable.content,
         reactionCount: postStatsTable.reactionCount,
         replyCount: postStatsTable.replyCount,
@@ -102,15 +109,7 @@ export class PostService {
       return Result.fail('Post not found');
     }
 
-    let post: {
-      id: number;
-      content: string;
-      reactionCount: number;
-      replyCount: number;
-      mediaPaths: string[];
-      dateCreated: Date;
-      media: undefined;
-    } = { ...res[0], media: undefined, mediaPaths: [] };
+    let post = { ...res[0], media: undefined, mediaPaths: [] };
 
     if (res.length >= 1 && res[0].media) {
       const mediaPaths = res
@@ -119,10 +118,26 @@ export class PostService {
           p.push(c);
           return p;
         }, []);
+      // @ts-expect-error mediaPaths is expected
       post = { ...post, mediaPaths };
     }
 
-    return Result.ok('Post fetched successfully', post);
+    const [owner] = await this.db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        displayName: profileTable.displayName,
+        description: profileTable.description,
+        profilePicture: profileTable.profilePicture,
+        followerCount: profileTable.followerCount,
+        followingCount: profileTable.followingCount,
+        role: userTable.role,
+      })
+      .from(userTable)
+      .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
+      .where(eq(userTable.id, post.ownerId));
+
+    return Result.ok('Post fetched successfully', { ...post, owner });
   }
 
   async update(id: number, dto: UpdatePostDto) {
