@@ -1,5 +1,9 @@
 import { ApiController } from '@/common/decorators';
-import { AuthenticatedGuard } from '@/common/guards';
+import {
+  AuthenticatedGuard,
+  GetRequesterGuard,
+  PostExistGuard,
+} from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
   BadRequestException,
@@ -13,9 +17,12 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { CreatePostDto } from './dto/create-post.dto';
+import { ReactDto } from './dto/react.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostService } from './post.service';
 
@@ -43,8 +50,9 @@ export class PostController {
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    const res = await this.postService.findOne(id);
+  @UseGuards(PostExistGuard, GetRequesterGuard)
+  async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
+    const res = await this.postService.findOne(id, req['userId'] as number);
     if (!res.success) {
       throw new NotFoundException(res.message);
     }
@@ -52,12 +60,48 @@ export class PostController {
   }
 
   @Patch(':id')
+  @UseGuards(PostExistGuard)
   update(@Param('id') id: string, @Body() dto: UpdatePostDto) {
     return this.postService.update(+id, dto);
   }
 
   @Delete(':id')
+  @UseGuards(PostExistGuard)
   remove(@Param('id') id: string) {
     return this.postService.remove(+id);
+  }
+
+  @Patch(':id/react')
+  @UseGuards(PostExistGuard, GetRequesterGuard)
+  async react(
+    @Param('id', ParseIntPipe) postId: number,
+    @Body() dto: ReactDto,
+    @Req() req: Request,
+  ) {
+    const res = await this.postService.updateReaction(
+      postId,
+      req['userId'] as number,
+      dto,
+    );
+    if (!res.success) {
+      throw new BadRequestException(res.message);
+    }
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Delete(':id/react')
+  @UseGuards(PostExistGuard, GetRequesterGuard)
+  async removeReaction(
+    @Param('id', ParseIntPipe) postId: number,
+    @Req() req: Request,
+  ) {
+    const res = await this.postService.removeReaction(
+      postId,
+      req['userId'] as number,
+    );
+    if (!res.success) {
+      throw new BadRequestException(res.message);
+    }
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 }

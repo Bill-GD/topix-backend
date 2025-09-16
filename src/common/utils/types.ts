@@ -29,7 +29,7 @@ export const MediaTypes = {
 
 export const Reactions = {
   like: 'like',
-  love: 'love',
+  heart: 'heart',
   laugh: 'laugh',
   sad: 'sad',
   angry: 'angry',

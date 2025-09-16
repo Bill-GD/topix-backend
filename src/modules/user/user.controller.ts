@@ -59,10 +59,13 @@ export class UserController {
   }
 
   @Get(':username/posts')
-  @UseGuards(UserExistGuard('username'))
-  async getUserPosts(@Param('username') username: string) {
+  @UseGuards(UserExistGuard('username'), GetRequesterGuard)
+  async getUserPosts(@Param('username') username: string, @Req() req: Request) {
     const user = await this.userService.getUserByUsername(username);
-    const res = await this.postService.findAllOfUser(user.id);
+    const res = await this.postService.getPostsOfUser(
+      user.id,
+      req['userId'] as number,
+    );
     const posts = res.data.map((p) => ({ ...p, owner: user }));
 
     return ControllerResponse.ok(res.message, posts, HttpStatus.OK);

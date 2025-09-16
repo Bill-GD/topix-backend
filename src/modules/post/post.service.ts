@@ -6,10 +6,12 @@ import {
   postStatsTable,
   postTable,
   profileTable,
+  reactionTable,
   userTable,
 } from '@/database/schemas';
+import { ReactDto } from '@/modules/post/dto/react.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -51,7 +53,7 @@ export class PostService {
     return Result.ok('Post fetched successfully', null);
   }
 
-  async findAllOfUser(userId: number) {
+  async getPostsOfUser(userId: number, requesterId: number) {
     const posts = await this.db
       .select({
         id: postTable.id,
@@ -83,13 +85,34 @@ export class PostService {
       mediaPaths.push(m);
     }
 
+    const reactionMap = new Map(
+      (
+        await this.db
+          .select({
+            postId: reactionTable.postId,
+            reaction: reactionTable.type,
+          })
+          .from(reactionTable)
+          .where(
+            and(
+              eq(reactionTable.userId, requesterId),
+              inArray(reactionTable.postId, postIds),
+            ),
+          )
+      ).map((r) => [r.postId, r.reaction]),
+    );
+
     return Result.ok(
       'Fetched user posts successfully',
-      posts.map((p, i) => ({ ...p, mediaPaths: mediaPaths[i] })),
+      posts.map((p, i) => ({
+        ...p,
+        mediaPaths: mediaPaths[i],
+        reaction: reactionMap.get(p.id) ?? null,
+      })),
     );
   }
 
-  async findOne(postId: number) {
+  async findOne(postId: number, requesterId: number) {
     const res = await this.db
       .select({
         id: postTable.id,
@@ -104,10 +127,6 @@ export class PostService {
       .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.id, postId));
-
-    if (res.length <= 0) {
-      return Result.fail('Post not found');
-    }
 
     let post = { ...res[0], media: undefined, mediaPaths: [] };
 
@@ -137,7 +156,65 @@ export class PostService {
       .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
       .where(eq(userTable.id, post.ownerId));
 
-    return Result.ok('Post fetched successfully', { ...post, owner });
+    const reaction = await this.db
+      .select({ reaction: reactionTable.type })
+      .from(reactionTable)
+      .where(
+        and(
+          eq(reactionTable.userId, requesterId),
+          eq(reactionTable.postId, postId),
+        ),
+      );
+
+    return Result.ok('Post fetched successfully', {
+      ...post,
+      owner,
+      reaction: reaction.length < 1 ? null : reaction[0].reaction,
+    });
+  }
+
+  async updateReaction(postId: number, userId: number, dto: ReactDto) {
+    const res = await this.db.$count(
+      reactionTable,
+      and(eq(reactionTable.postId, postId), eq(reactionTable.userId, userId)),
+    );
+
+    if (res < 1) {
+      await this.db.insert(reactionTable).values({
+        postId,
+        userId: userId,
+        type: dto.reaction,
+      });
+      await this.db
+        .update(postStatsTable)
+        .set({ reactionCount: sql`${postStatsTable.reactionCount} + 1` })
+        .where(eq(postStatsTable.postId, postId));
+    }
+    if (res >= 1) {
+      await this.db
+        .update(reactionTable)
+        .set({ type: dto.reaction })
+        .where(
+          and(
+            eq(reactionTable.postId, postId),
+            eq(reactionTable.userId, userId),
+          ),
+        );
+    }
+    return Result.ok('Updated post reaction successfully', null);
+  }
+
+  async removeReaction(postId: number, userId: number) {
+    await this.db
+      .delete(reactionTable)
+      .where(
+        and(eq(reactionTable.postId, postId), eq(reactionTable.userId, userId)),
+      );
+    await this.db
+      .update(postStatsTable)
+      .set({ reactionCount: sql`${postStatsTable.reactionCount} - 1` })
+      .where(eq(postStatsTable.postId, postId));
+    return Result.ok('Updated post reaction successfully', null);
   }
 
   async update(id: number, dto: UpdatePostDto) {
