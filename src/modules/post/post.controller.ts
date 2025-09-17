@@ -33,9 +33,10 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Post()
+  @UseGuards(GetRequesterGuard)
   @ApiController('application/x-www-form-urlencoded')
-  async create(@Body() dto: CreatePostDto) {
-    const res = await this.postService.create(dto);
+  async create(@Req() req: Request, @Body() dto: CreatePostDto) {
+    const res = await this.postService.create(dto, req['userId'] as number);
 
     if (!res.success) {
       throw new BadRequestException(res.message);
@@ -51,8 +52,11 @@ export class PostController {
 
   @Get(':id')
   @UseGuards(PostExistGuard, GetRequesterGuard)
-  async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    const res = await this.postService.findOne(id, req['userId'] as number);
+  async findOne(
+    @Param('id', ParseIntPipe) postId: number,
+    @Req() req: Request,
+  ) {
+    const res = await this.postService.findOne(postId, req['userId'] as number);
     if (!res.success) {
       throw new NotFoundException(res.message);
     }
@@ -61,14 +65,14 @@ export class PostController {
 
   @Patch(':id')
   @UseGuards(PostExistGuard)
-  update(@Param('id') id: string, @Body() dto: UpdatePostDto) {
-    return this.postService.update(+id, dto);
+  update(@Param('id') postId: string, @Body() dto: UpdatePostDto) {
+    return this.postService.update(+postId, dto);
   }
 
   @Delete(':id')
   @UseGuards(PostExistGuard)
-  remove(@Param('id') id: string) {
-    return this.postService.remove(+id);
+  remove(@Param('id') postId: string) {
+    return this.postService.remove(+postId);
   }
 
   @Patch(':id/react')

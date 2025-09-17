@@ -20,11 +20,11 @@ import { UpdatePostDto } from './dto/update-post.dto';
 export class PostService {
   constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
 
-  async create(dto: CreatePostDto) {
+  async create(dto: CreatePostDto, ownerId: number) {
     const [{ id: postId }] = await this.db
       .insert(postTable)
       .values({
-        ownerId: dto.ownerId,
+        ownerId: ownerId,
         content: dto.content,
       })
       .$returningId();

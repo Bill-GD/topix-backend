@@ -1,4 +1,4 @@
-import { IsNotEmptyString, IsPositiveNumber } from '@/common/decorators';
+import { IsNotEmptyString } from '@/common/decorators';
 import { MediaTypes } from '@/common/utils/types';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString } from 'class-validator';
@@ -7,10 +7,6 @@ export class CreatePostDto {
   @ApiProperty()
   @IsString()
   content: string;
-
-  @ApiProperty({ default: 1 })
-  @IsPositiveNumber()
-  ownerId: number;
 
   @ApiProperty({ enum: Object.keys(MediaTypes) })
   @IsNotEmptyString()
