@@ -36,7 +36,7 @@ export class PostController {
   @UseGuards(GetRequesterGuard)
   @ApiController('application/x-www-form-urlencoded')
   async create(@Req() req: Request, @Body() dto: CreatePostDto) {
-    const res = await this.postService.create(dto, req['userId'] as number);
+    const res = await this.postService.create(req['userId'] as number, dto);
 
     if (!res.success) {
       throw new BadRequestException(res.message);
@@ -102,6 +102,40 @@ export class PostController {
     const res = await this.postService.removeReaction(
       postId,
       req['userId'] as number,
+    );
+    if (!res.success) {
+      throw new BadRequestException(res.message);
+    }
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Get(':id/replies')
+  @UseGuards(PostExistGuard, GetRequesterGuard)
+  async getPostReplies(
+    @Param('id', ParseIntPipe) postId: number,
+    @Req() req: Request,
+  ) {
+    const res = await this.postService.getPostReplies(
+      postId,
+      req['userId'] as number,
+    );
+    if (!res.success) {
+      throw new BadRequestException(res.message);
+    }
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Post(':id/reply')
+  @UseGuards(PostExistGuard, GetRequesterGuard)
+  async reply(
+    @Param('id', ParseIntPipe) postId: number,
+    @Body() dto: CreatePostDto,
+    @Req() req: Request,
+  ) {
+    const res = await this.postService.reply(
+      postId,
+      req['userId'] as number,
+      dto,
     );
     if (!res.success) {
       throw new BadRequestException(res.message);

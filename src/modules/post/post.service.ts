@@ -20,7 +20,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 export class PostService {
   constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
 
-  async create(dto: CreatePostDto, ownerId: number) {
+  async create(ownerId: number, dto: CreatePostDto) {
     const [{ id: postId }] = await this.db
       .insert(postTable)
       .values({
@@ -69,38 +69,8 @@ export class PostService {
       .limit(5);
 
     const postIds = posts.map((p) => p.id);
-
-    const medias = await this.db
-      .select({
-        postId: mediaTable.postId,
-        path: mediaTable.path,
-      })
-      .from(mediaTable)
-      .where(inArray(mediaTable.postId, postIds));
-
-    const mediaPaths: string[][] = [];
-
-    for (const postId of postIds) {
-      const m = medias.filter((e) => e.postId === postId).map((e) => e.path);
-      mediaPaths.push(m);
-    }
-
-    const reactionMap = new Map(
-      (
-        await this.db
-          .select({
-            postId: reactionTable.postId,
-            reaction: reactionTable.type,
-          })
-          .from(reactionTable)
-          .where(
-            and(
-              eq(reactionTable.userId, requesterId),
-              inArray(reactionTable.postId, postIds),
-            ),
-          )
-      ).map((r) => [r.postId, r.reaction]),
-    );
+    const mediaPaths = await this.getMediaPathsOfPosts(postIds);
+    const reactionMap = await this.getReactionMapOfPosts(postIds, requesterId);
 
     return Result.ok(
       'Fetched user posts successfully',
@@ -117,6 +87,7 @@ export class PostService {
       .select({
         id: postTable.id,
         ownerId: postTable.ownerId,
+        parentPostId: postTable.parentPostId,
         content: postTable.content,
         reactionCount: postStatsTable.reactionCount,
         replyCount: postStatsTable.replyCount,
@@ -173,6 +144,14 @@ export class PostService {
     });
   }
 
+  async update(id: number, dto: UpdatePostDto) {
+    return Result.ok('Post updated successfully', null);
+  }
+
+  async remove(id: number) {
+    return Result.ok('Post deleted successfully', null);
+  }
+
   async updateReaction(postId: number, userId: number, dto: ReactDto) {
     const res = await this.db.$count(
       reactionTable,
@@ -217,11 +196,125 @@ export class PostService {
     return Result.ok('Updated post reaction successfully', null);
   }
 
-  async update(id: number, dto: UpdatePostDto) {
-    return Result.ok('Post updated successfully', null);
+  async reply(postId: number, ownerId: number, dto: CreatePostDto) {
+    const [{ id: replyId }] = await this.db
+      .insert(postTable)
+      .values({
+        ownerId: ownerId,
+        content: dto.content,
+        parentPostId: postId,
+      })
+      .$returningId();
+
+    await this.db.insert(postStatsTable).values({ postId: replyId });
+    await this.db
+      .update(postStatsTable)
+      .set({ replyCount: sql`${postStatsTable.replyCount} + 1` })
+      .where(eq(postStatsTable.postId, postId));
+
+    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
+      await this.db.insert(mediaTable).values(
+        dto.mediaPaths.map((m) => {
+          const segments = m.split('/');
+          const publicId = segments[segments.length - 1].split('.')[0];
+
+          return {
+            id: publicId,
+            postId: replyId,
+            type: dto.type,
+            path: m,
+          };
+        }),
+      );
+    }
+    return Result.ok('Posted reply successfully', null);
   }
 
-  async remove(id: number) {
-    return Result.ok('Post deleted successfully', null);
+  async getPostReplies(postId: number, requesterId: number) {
+    const posts = await this.db
+      .select({
+        id: postTable.id,
+        ownerId: postTable.ownerId,
+        content: postTable.content,
+        reactionCount: postStatsTable.reactionCount,
+        replyCount: postStatsTable.replyCount,
+        dateCreated: postTable.dateCreated,
+      })
+      .from(postTable)
+      .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
+      .where(eq(postTable.parentPostId, postId))
+      .orderBy(desc(postTable.dateCreated))
+      .limit(10);
+
+    const postIds = posts.map((p) => p.id);
+    const mediaPaths = await this.getMediaPathsOfPosts(postIds);
+    const reactionMap = await this.getReactionMapOfPosts(postIds, requesterId);
+
+    const postOwnerIds = posts.map((p) => p.ownerId);
+    const owners = new Map(
+      (
+        await this.db
+          .select({
+            id: userTable.id,
+            username: userTable.username,
+            displayName: profileTable.displayName,
+            description: profileTable.description,
+            profilePicture: profileTable.profilePicture,
+            followerCount: profileTable.followerCount,
+            followingCount: profileTable.followingCount,
+            role: userTable.role,
+          })
+          .from(userTable)
+          .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
+          .where(inArray(userTable.id, postOwnerIds))
+      ).map((u) => [u.id, u]),
+    );
+
+    return Result.ok(
+      'Fetched post replies successfully',
+      posts.map((p, i) => ({
+        ...p,
+        mediaPaths: mediaPaths[i],
+        reaction: reactionMap.get(p.id) ?? null,
+        owner: owners.get(p.ownerId)!,
+      })),
+    );
+  }
+
+  async getMediaPathsOfPosts(postIds: number[]) {
+    const mediaPaths: string[][] = [];
+
+    const medias = await this.db
+      .select({
+        postId: mediaTable.postId,
+        path: mediaTable.path,
+      })
+      .from(mediaTable)
+      .where(inArray(mediaTable.postId, postIds));
+
+    for (const postId of postIds) {
+      const m = medias.filter((e) => e.postId === postId).map((e) => e.path);
+      mediaPaths.push(m);
+    }
+    return mediaPaths;
+  }
+
+  async getReactionMapOfPosts(postIds: number[], requesterId: number) {
+    return new Map(
+      (
+        await this.db
+          .select({
+            postId: reactionTable.postId,
+            reaction: reactionTable.type,
+          })
+          .from(reactionTable)
+          .where(
+            and(
+              eq(reactionTable.userId, requesterId),
+              inArray(reactionTable.postId, postIds),
+            ),
+          )
+      ).map((r) => [r.postId, r.reaction]),
+    );
   }
 }
