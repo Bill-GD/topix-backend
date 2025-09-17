@@ -11,7 +11,7 @@ import {
 } from '@/database/schemas';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -53,94 +53,54 @@ export class PostService {
     return Result.ok('Post fetched successfully', null);
   }
 
-  async getPostsOfUser(userId: number, requesterId: number) {
-    const posts = await this.db
-      .select({
-        id: postTable.id,
-        content: postTable.content,
-        reactionCount: postStatsTable.reactionCount,
-        replyCount: postStatsTable.replyCount,
-        dateCreated: postTable.dateCreated,
-      })
-      .from(postTable)
-      .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
-      .where(eq(postTable.ownerId, userId))
-      .orderBy(desc(postTable.dateCreated))
-      .limit(5);
-
-    const postIds = posts.map((p) => p.id);
-    const mediaPaths = await this.getMediaPathsOfPosts(postIds);
-    const reactionMap = await this.getReactionMapOfPosts(postIds, requesterId);
+  async getPostsOfUser(ownerUsername: string, requesterId: number) {
+    const posts = await this.getPostsByUsername(ownerUsername, requesterId);
+    const parents = new Map(
+      (
+        await this.getMultiplePosts(
+          posts.map((p) => p.parentPostId).filter((e) => e !== null),
+          requesterId,
+        )
+      ).map((p) => [p.id, p]),
+    );
 
     return Result.ok(
       'Fetched user posts successfully',
-      posts.map((p, i) => ({
-        ...p,
-        mediaPaths: mediaPaths[i],
-        reaction: reactionMap.get(p.id) ?? null,
+      posts.map((p) => ({
+        id: p.id,
+        parentPost: p.parentPostId ? parents.get(p.parentPostId) : undefined,
+        owner: p.owner,
+        content: p.content,
+        reaction: p.reaction,
+        reactionCount: p.reactionCount,
+        replyCount: p.replyCount,
+        mediaPaths: p.mediaPaths,
+        dateCreated: p.dateCreated,
       })),
     );
   }
 
   async findOne(postId: number, requesterId: number) {
-    const res = await this.db
-      .select({
-        id: postTable.id,
-        ownerId: postTable.ownerId,
-        parentPostId: postTable.parentPostId,
-        content: postTable.content,
-        reactionCount: postStatsTable.reactionCount,
-        replyCount: postStatsTable.replyCount,
-        media: mediaTable.path,
-        dateCreated: postTable.dateCreated,
-      })
-      .from(postTable)
-      .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
-      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
-      .where(eq(postTable.id, postId));
-
-    let post = { ...res[0], media: undefined, mediaPaths: [] };
-
-    if (res.length >= 1 && res[0].media) {
-      const mediaPaths = res
-        .map((p) => p.media!)
-        .reduce((p: string[], c) => {
-          p.push(c);
-          return p;
-        }, []);
-      // @ts-expect-error mediaPaths is expected
-      post = { ...post, mediaPaths };
+    const currentPost = await this.getSinglePost(postId, requesterId);
+    if (!currentPost.parentPostId) {
+      return Result.ok('Post fetched successfully', currentPost);
     }
 
-    const [owner] = await this.db
-      .select({
-        id: userTable.id,
-        username: userTable.username,
-        displayName: profileTable.displayName,
-        description: profileTable.description,
-        profilePicture: profileTable.profilePicture,
-        followerCount: profileTable.followerCount,
-        followingCount: profileTable.followingCount,
-        role: userTable.role,
-      })
-      .from(userTable)
-      .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
-      .where(eq(userTable.id, post.ownerId));
-
-    const reaction = await this.db
-      .select({ reaction: reactionTable.type })
-      .from(reactionTable)
-      .where(
-        and(
-          eq(reactionTable.userId, requesterId),
-          eq(reactionTable.postId, postId),
-        ),
-      );
+    const parentPost = await this.getSinglePost(
+      currentPost.parentPostId,
+      requesterId,
+    );
 
     return Result.ok('Post fetched successfully', {
-      ...post,
-      owner,
-      reaction: reaction.length < 1 ? null : reaction[0].reaction,
+      id: currentPost.id,
+      owner: currentPost.owner,
+      parentPost,
+      content: currentPost.content,
+      reaction: currentPost.reaction,
+      reactionCount: currentPost.reactionCount,
+      replyCount: currentPost.replyCount,
+      mediaPaths: currentPost.mediaPaths,
+      dateCreated: currentPost.dateCreated,
     });
   }
 
@@ -231,90 +191,174 @@ export class PostService {
   }
 
   async getPostReplies(postId: number, requesterId: number) {
-    const posts = await this.db
-      .select({
-        id: postTable.id,
-        ownerId: postTable.ownerId,
-        content: postTable.content,
-        reactionCount: postStatsTable.reactionCount,
-        replyCount: postStatsTable.replyCount,
-        dateCreated: postTable.dateCreated,
-      })
-      .from(postTable)
-      .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
-      .where(eq(postTable.parentPostId, postId))
+    const posts = await this.getPostQuery()
+      .where(
+        and(
+          or(
+            eq(reactionTable.userId, requesterId),
+            isNull(reactionTable.userId),
+          ),
+          eq(postTable.parentPostId, postId),
+        ),
+      )
+      .groupBy(
+        postTable.id,
+        reactionTable.type,
+        postStatsTable.reactionCount,
+        postStatsTable.replyCount,
+        postTable.dateCreated,
+      )
       .orderBy(desc(postTable.dateCreated))
       .limit(10);
 
-    const postIds = posts.map((p) => p.id);
-    const mediaPaths = await this.getMediaPathsOfPosts(postIds);
-    const reactionMap = await this.getReactionMapOfPosts(postIds, requesterId);
-
-    const postOwnerIds = posts.map((p) => p.ownerId);
-    const owners = new Map(
-      (
-        await this.db
-          .select({
-            id: userTable.id,
-            username: userTable.username,
-            displayName: profileTable.displayName,
-            description: profileTable.description,
-            profilePicture: profileTable.profilePicture,
-            followerCount: profileTable.followerCount,
-            followingCount: profileTable.followingCount,
-            role: userTable.role,
-          })
-          .from(userTable)
-          .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
-          .where(inArray(userTable.id, postOwnerIds))
-      ).map((u) => [u.id, u]),
-    );
-
     return Result.ok(
       'Fetched post replies successfully',
-      posts.map((p, i) => ({
-        ...p,
-        mediaPaths: mediaPaths[i],
-        reaction: reactionMap.get(p.id) ?? null,
-        owner: owners.get(p.ownerId)!,
+      posts.map((p) => ({
+        id: p.id,
+        owner: {
+          username: p.username,
+          displayName: p.displayName,
+          profilePicture: p.profilePicture,
+        },
+        content: p.content,
+        reaction: p.reaction,
+        reactionCount: p.reactionCount,
+        replyCount: p.replyCount,
+        mediaPaths: p.media ? (p.media as string).split(';') : [],
+        dateCreated: p.dateCreated,
       })),
     );
   }
 
-  async getMediaPathsOfPosts(postIds: number[]) {
-    const mediaPaths: string[][] = [];
+  private async getSinglePost(postId: number, requesterId: number) {
+    const res = await this.getPostQuery()
+      .where(
+        and(
+          or(
+            eq(reactionTable.userId, requesterId),
+            isNull(reactionTable.userId),
+          ),
+          eq(postTable.id, postId),
+        ),
+      )
+      .groupBy(
+        postTable.id,
+        reactionTable.type,
+        postStatsTable.reactionCount,
+        postStatsTable.replyCount,
+      );
 
-    const medias = await this.db
-      .select({
-        postId: mediaTable.postId,
-        path: mediaTable.path,
-      })
-      .from(mediaTable)
-      .where(inArray(mediaTable.postId, postIds));
-
-    for (const postId of postIds) {
-      const m = medias.filter((e) => e.postId === postId).map((e) => e.path);
-      mediaPaths.push(m);
-    }
-    return mediaPaths;
+    return {
+      id: res[0].id,
+      owner: {
+        username: res[0].username,
+        displayName: res[0].displayName,
+        profilePicture: res[0].profilePicture,
+      },
+      parentPostId: res[0].parentPostId,
+      content: res[0].content,
+      reaction: res[0].reaction,
+      reactionCount: res[0].reactionCount,
+      replyCount: res[0].replyCount,
+      mediaPaths: res[0].media ? (res[0].media as string).split(';') : [],
+      dateCreated: res[0].dateCreated,
+    };
   }
 
-  async getReactionMapOfPosts(postIds: number[], requesterId: number) {
-    return new Map(
-      (
-        await this.db
-          .select({
-            postId: reactionTable.postId,
-            reaction: reactionTable.type,
-          })
-          .from(reactionTable)
-          .where(
-            and(
-              eq(reactionTable.userId, requesterId),
-              inArray(reactionTable.postId, postIds),
-            ),
-          )
-      ).map((r) => [r.postId, r.reaction]),
-    );
+  private async getMultiplePosts(postIds: number[], requesterId: number) {
+    const res = await this.getPostQuery()
+      .where(
+        and(
+          or(
+            eq(reactionTable.userId, requesterId),
+            isNull(reactionTable.userId),
+          ),
+          inArray(postTable.id, postIds),
+        ),
+      )
+      .groupBy(
+        postTable.id,
+        reactionTable.type,
+        postStatsTable.reactionCount,
+        postStatsTable.replyCount,
+      );
+
+    return res.map((r) => ({
+      id: r.id,
+      owner: {
+        username: r.username,
+        displayName: r.displayName,
+        profilePicture: r.profilePicture,
+      },
+      parentPostId: r.parentPostId,
+      content: r.content,
+      reaction: r.reaction,
+      reactionCount: r.reactionCount,
+      replyCount: r.replyCount,
+      mediaPaths: r.media ? (r.media as string).split(';') : [],
+      dateCreated: r.dateCreated,
+    }));
+  }
+
+  private async getPostsByUsername(ownerUsername: string, requesterId: number) {
+    const res = await this.getPostQuery()
+      .where(
+        and(
+          or(
+            eq(reactionTable.userId, requesterId),
+            isNull(reactionTable.userId),
+          ),
+          eq(userTable.username, ownerUsername),
+        ),
+      )
+      .groupBy(
+        postTable.id,
+        reactionTable.type,
+        postStatsTable.reactionCount,
+        postStatsTable.replyCount,
+        postTable.dateCreated,
+      )
+      .orderBy(desc(postTable.dateCreated))
+      .limit(10);
+
+    return res.map((r) => ({
+      id: r.id,
+      owner: {
+        username: r.username,
+        displayName: r.displayName,
+        profilePicture: r.profilePicture,
+      },
+      parentPostId: r.parentPostId,
+      content: r.content,
+      reaction: r.reaction,
+      reactionCount: r.reactionCount,
+      replyCount: r.replyCount,
+      mediaPaths: r.media ? (r.media as string).split(';') : [],
+      dateCreated: r.dateCreated,
+    }));
+  }
+
+  private getPostQuery() {
+    return this.db
+      .select({
+        id: postTable.id,
+        parentPostId: postTable.parentPostId,
+        username: userTable.username,
+        displayName: profileTable.displayName,
+        profilePicture: profileTable.profilePicture,
+        content: postTable.content,
+        reaction: reactionTable.type,
+        reactionCount: postStatsTable.reactionCount,
+        replyCount: postStatsTable.replyCount,
+        media: sql`(group_concat(${mediaTable.path} separator ';'))`,
+        dateCreated: postTable.dateCreated,
+      })
+      .from(postTable)
+      .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
+      .innerJoin(userTable, eq(userTable.id, postTable.ownerId))
+      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .leftJoin(reactionTable, eq(reactionTable.postId, postTable.id))
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
+      .$dynamic();
   }
 }
