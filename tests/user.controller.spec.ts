@@ -1,4 +1,3 @@
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
 import { Result } from '@/common/utils/result';
 import { DatabaseModule } from '@/modules/database.module';
 import { PostModule } from '@/modules/post/post.module';
@@ -17,12 +16,7 @@ describe('UserController', () => {
       controllers: [UserController],
       providers: [UserService, JwtService],
       imports: [DatabaseModule, PostModule],
-    })
-      .overrideGuard(AuthenticatedGuard)
-      .useValue({ canActivate: jest.fn(() => true) })
-      .overrideGuard(GetRequesterGuard)
-      .useValue({ canActivate: jest.fn(() => true) })
-      .compile();
+    }).compile();
 
     controller = module.get(UserController);
     service = module.get(UserService);
@@ -32,16 +26,6 @@ describe('UserController', () => {
     expect(service).toBeDefined();
     expect(controller).toBeDefined();
   });
-
-  // it(`should throw NotFoundException if user doesn't exist`, async () => {
-  //   await expect(
-  //     controller.getUser('an-username_that-should_not-exist_123'),
-  //   ).rejects.toThrow(NotFoundException);
-  //
-  //   await expect(
-  //     controller.deleteProfile('an-username_that-should_not-exist_123'),
-  //   ).rejects.toThrow(NotFoundException);
-  // });
 
   it(`should throw ConflictException when trying to update to an existing username`, async () => {
     jest

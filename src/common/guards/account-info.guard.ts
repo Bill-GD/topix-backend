@@ -18,6 +18,7 @@ import { Request } from 'express';
 
 /**
  * Checks whether the request body contains available account info.
+ * Only available for `auth`.
  * @param shouldExist Should the info already be used by another?
  * @param checks What to check
  */

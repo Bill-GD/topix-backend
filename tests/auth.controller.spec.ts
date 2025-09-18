@@ -1,5 +1,6 @@
-import { AccountInfoGuard } from '@/common/guards';
 import { Result } from '@/common/utils/result';
+import { AuthController } from '@/modules/auth/auth.controller';
+import { AuthService } from '@/modules/auth/auth.service';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
@@ -13,13 +14,10 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from '@/modules/auth/auth.controller';
-import { AuthService } from '@/modules/auth/auth.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let service: AuthService;
-  const loginGuard = AccountInfoGuard(true, ['username']);
 
   const registerDto: RegisterDto = {
     email: 'test@gmail.com',
@@ -38,10 +36,7 @@ describe('AuthController', () => {
       controllers: [AuthController],
       providers: [AuthService, JwtService],
       imports: [DatabaseModule, MailerModule, CryptoModule],
-    })
-      .overrideGuard(loginGuard)
-      .useValue({ canActivate: jest.fn(() => true) })
-      .compile();
+    }).compile();
 
     controller = module.get(AuthController);
     service = module.get(AuthService);

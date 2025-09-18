@@ -1,6 +1,11 @@
 import { JwtUserPayload } from '@/common/utils/types';
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { JsonWebTokenError, JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
 @Injectable()
@@ -11,8 +16,14 @@ export class GetRequesterGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<Request>();
 
     const authToken = req.headers.authorization!.split(' ')[1];
-    const user: JwtUserPayload = this.jwt.verify(authToken);
-    req.userId = user.sub;
+    try {
+      const user: JwtUserPayload = this.jwt.verify(authToken);
+      req.userId = user.sub;
+    } catch (e) {
+      if (e instanceof JsonWebTokenError) {
+        throw new UnauthorizedException(e.message);
+      }
+    }
 
     return true;
   }

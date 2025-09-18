@@ -6,13 +6,11 @@ import {
 } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpStatus,
-  NotFoundException,
   Param,
   ParseIntPipe,
   Patch,
@@ -35,11 +33,6 @@ export class PostController {
   @ApiController('application/x-www-form-urlencoded')
   async create(@RequesterID() requesterId: number, @Body() dto: CreatePostDto) {
     const res = await this.postService.create(requesterId, dto);
-
-    if (!res.success) {
-      throw new BadRequestException(res.message);
-    }
-
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
@@ -55,9 +48,6 @@ export class PostController {
     @RequesterID() requesterId: number,
   ) {
     const res = await this.postService.findOne(postId, requesterId);
-    if (!res.success) {
-      throw new NotFoundException(res.message);
-    }
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
@@ -81,9 +71,6 @@ export class PostController {
     @Body() dto: ReactDto,
   ) {
     const res = await this.postService.updateReaction(postId, requesterId, dto);
-    if (!res.success) {
-      throw new BadRequestException(res.message);
-    }
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
@@ -94,9 +81,6 @@ export class PostController {
     @RequesterID() requesterId: number,
   ) {
     const res = await this.postService.removeReaction(postId, requesterId);
-    if (!res.success) {
-      throw new BadRequestException(res.message);
-    }
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
@@ -107,9 +91,6 @@ export class PostController {
     @RequesterID() requesterId: number,
   ) {
     const res = await this.postService.getPostReplies(postId, requesterId);
-    if (!res.success) {
-      throw new BadRequestException(res.message);
-    }
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
@@ -121,9 +102,6 @@ export class PostController {
     @Body() dto: CreatePostDto,
   ) {
     const res = await this.postService.reply(postId, requesterId, dto);
-    if (!res.success) {
-      throw new BadRequestException(res.message);
-    }
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 }
