@@ -1,4 +1,4 @@
-import { ApiController } from '@/common/decorators';
+import { ApiController, RequesterID } from '@/common/decorators';
 import {
   AuthenticatedGuard,
   GetRequesterGuard,
@@ -17,10 +17,8 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ReactDto } from './dto/react.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -35,8 +33,8 @@ export class PostController {
   @Post()
   @UseGuards(GetRequesterGuard)
   @ApiController('application/x-www-form-urlencoded')
-  async create(@Req() req: Request, @Body() dto: CreatePostDto) {
-    const res = await this.postService.create(req['userId'] as number, dto);
+  async create(@RequesterID() requesterId: number, @Body() dto: CreatePostDto) {
+    const res = await this.postService.create(requesterId, dto);
 
     if (!res.success) {
       throw new BadRequestException(res.message);
@@ -54,9 +52,9 @@ export class PostController {
   @UseGuards(PostExistGuard, GetRequesterGuard)
   async findOne(
     @Param('id', ParseIntPipe) postId: number,
-    @Req() req: Request,
+    @RequesterID() requesterId: number,
   ) {
-    const res = await this.postService.findOne(postId, req['userId'] as number);
+    const res = await this.postService.findOne(postId, requesterId);
     if (!res.success) {
       throw new NotFoundException(res.message);
     }
@@ -79,14 +77,10 @@ export class PostController {
   @UseGuards(PostExistGuard, GetRequesterGuard)
   async react(
     @Param('id', ParseIntPipe) postId: number,
+    @RequesterID() requesterId: number,
     @Body() dto: ReactDto,
-    @Req() req: Request,
   ) {
-    const res = await this.postService.updateReaction(
-      postId,
-      req['userId'] as number,
-      dto,
-    );
+    const res = await this.postService.updateReaction(postId, requesterId, dto);
     if (!res.success) {
       throw new BadRequestException(res.message);
     }
@@ -97,12 +91,9 @@ export class PostController {
   @UseGuards(PostExistGuard, GetRequesterGuard)
   async removeReaction(
     @Param('id', ParseIntPipe) postId: number,
-    @Req() req: Request,
+    @RequesterID() requesterId: number,
   ) {
-    const res = await this.postService.removeReaction(
-      postId,
-      req['userId'] as number,
-    );
+    const res = await this.postService.removeReaction(postId, requesterId);
     if (!res.success) {
       throw new BadRequestException(res.message);
     }
@@ -113,12 +104,9 @@ export class PostController {
   @UseGuards(PostExistGuard, GetRequesterGuard)
   async getPostReplies(
     @Param('id', ParseIntPipe) postId: number,
-    @Req() req: Request,
+    @RequesterID() requesterId: number,
   ) {
-    const res = await this.postService.getPostReplies(
-      postId,
-      req['userId'] as number,
-    );
+    const res = await this.postService.getPostReplies(postId, requesterId);
     if (!res.success) {
       throw new BadRequestException(res.message);
     }
@@ -129,14 +117,10 @@ export class PostController {
   @UseGuards(PostExistGuard, GetRequesterGuard)
   async reply(
     @Param('id', ParseIntPipe) postId: number,
+    @RequesterID() requesterId: number,
     @Body() dto: CreatePostDto,
-    @Req() req: Request,
   ) {
-    const res = await this.postService.reply(
-      postId,
-      req['userId'] as number,
-      dto,
-    );
+    const res = await this.postService.reply(postId, requesterId, dto);
     if (!res.success) {
       throw new BadRequestException(res.message);
     }

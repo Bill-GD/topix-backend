@@ -5,6 +5,7 @@ import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostController } from '@/modules/post/post.controller';
 import { PostService } from '@/modules/post/post.service';
 import { NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 
 describe('PostController', () => {
@@ -14,7 +15,7 @@ describe('PostController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PostController],
-      providers: [PostService],
+      providers: [PostService, JwtService],
       imports: [DatabaseModule],
     })
       .overrideGuard(AuthenticatedGuard)
@@ -37,20 +38,22 @@ describe('PostController', () => {
     const dto: CreatePostDto = {
       content: '',
       type: 'image',
-      ownerId: 1,
     };
-    const res = await controller.create(dto);
+    const res = await controller.create(1, dto);
     expect(res.success).toBe(true);
     expect(res.status).toBe(201);
     expect(res.message).toBe('Success');
-    expect(func).toHaveBeenCalledWith(dto);
+    expect(func).toHaveBeenCalledWith(1, dto);
   });
 
   it(`should throw NotFoundException if post doesn't exist`, async () => {
     const func = jest
       .spyOn(service, 'findOne')
+      // @ts-expect-error the normal only return ok, but mock returns failure to test
       .mockResolvedValue(Result.fail('Fail'));
-    await expect(controller.findOne(-1111)).rejects.toThrow(NotFoundException);
+    await expect(controller.findOne(-1111, 1)).rejects.toThrow(
+      NotFoundException,
+    );
     expect(func).toHaveBeenCalled();
   });
 });

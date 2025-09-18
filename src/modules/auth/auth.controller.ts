@@ -1,4 +1,4 @@
-import { ApiController } from '@/common/decorators';
+import { ApiController, RequesterID } from '@/common/decorators';
 import {
   AccountInfoGuard,
   AuthenticatedGuard,
@@ -20,11 +20,9 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  Req,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 
 @Controller('auth')
 @ApiController()
@@ -33,10 +31,11 @@ export class AuthController {
 
   @Post('password-check')
   @UseGuards(AuthenticatedGuard, GetRequesterGuard)
-  async checkPassword(@Req() request: Request, @Body() body: PasswordCheckDto) {
-    if (
-      !(await this.authService.checkPassword(request['userId'], body.password))
-    ) {
+  async checkPassword(
+    @RequesterID() requesterId: number,
+    @Body() dto: PasswordCheckDto,
+  ) {
+    if (!(await this.authService.checkPassword(requesterId, dto.password))) {
       throw new BadRequestException('Wrong password.');
     }
     return ControllerResponse.ok('Password is correct.', null, HttpStatus.OK);

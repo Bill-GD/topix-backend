@@ -49,7 +49,7 @@ describe('UserController', () => {
       .mockResolvedValue(Result.fail('Fail'));
 
     await expect(
-      controller.updateProfile({ userId: 1 } as any, {
+      controller.updateProfile(1, {
         username: 'existing-name',
       }),
     ).rejects.toThrow(ConflictException);

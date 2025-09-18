@@ -1,4 +1,4 @@
-import { ApiController } from '@/common/decorators';
+import { ApiController, RequesterID } from '@/common/decorators';
 import {
   AccountOwnerGuard,
   AuthenticatedGuard,
@@ -18,10 +18,8 @@ import {
   HttpStatus,
   Param,
   Patch,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
 
 @Controller('user')
 @UseGuards(AuthenticatedGuard)
@@ -34,10 +32,8 @@ export class UserController {
 
   @Get('me')
   @UseGuards(GetRequesterGuard)
-  async getSelf(@Req() request: Request) {
-    const user = await this.userService.getUserById(
-      request['userId'] as number,
-    );
+  async getSelf(@RequesterID() requesterId: number) {
+    const user = await this.userService.getUserById(requesterId);
 
     return ControllerResponse.ok(
       'Fetched user successfully',
@@ -60,22 +56,22 @@ export class UserController {
 
   @Get(':username/posts')
   @UseGuards(UserExistGuard('username'), GetRequesterGuard)
-  async getUserPosts(@Param('username') username: string, @Req() req: Request) {
-    const res = await this.postService.getPostsOfUser(
-      username,
-      req['userId'] as number,
-    );
+  async getUserPosts(
+    @Param('username') username: string,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.postService.getPostsOfUser(username, requesterId);
 
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Patch('me')
   @UseGuards(GetRequesterGuard)
-  async updateProfile(@Req() request: Request, @Body() dto: UpdateProfileDto) {
-    const res = await this.userService.updateProfileInfo(
-      request['userId'] as number,
-      dto,
-    );
+  async updateProfile(
+    @RequesterID() requesterId: number,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    const res = await this.userService.updateProfileInfo(requesterId, dto);
 
     if (!res.success) {
       throw new ConflictException(res.message);

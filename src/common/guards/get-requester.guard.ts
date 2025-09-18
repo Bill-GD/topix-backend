@@ -12,7 +12,7 @@ export class GetRequesterGuard implements CanActivate {
 
     const authToken = req.headers.authorization!.split(' ')[1];
     const user: JwtUserPayload = this.jwt.verify(authToken);
-    req['userId'] = user.sub;
+    req.userId = user.sub;
 
     return true;
   }
