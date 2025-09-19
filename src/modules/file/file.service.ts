@@ -37,6 +37,21 @@ export class FileService {
     return Result.ok('File uploaded successfully', res.secure_url);
   }
 
+  async removeSingle(publicId: string, type: 'image' | 'video') {
+    await new Promise((resolve, reject) => {
+      this.cloudinary.uploader.destroy(
+        publicId,
+        { resource_type: type },
+        (error, uploadResult) => {
+          if (error) {
+            return reject(new HttpException(error.message, error.http_code));
+          }
+          return resolve(uploadResult);
+        },
+      );
+    });
+  }
+
   async uploadList(list: Array<Express.Multer.File>) {
     const ops = list.map((file) => this.uploadSingle(file));
     const resList = await Promise.all(ops);

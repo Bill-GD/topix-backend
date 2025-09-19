@@ -9,6 +9,7 @@ import {
   reactionTable,
   userTable,
 } from '@/database/schemas';
+import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
@@ -18,7 +19,10 @@ import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class PostService {
-  constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
+  constructor(
+    @Inject(DatabaseProviderKey) private readonly db: DBType,
+    private readonly fileService: FileService,
+  ) {}
 
   async create(ownerId: number, dto: CreatePostDto) {
     const [{ id: postId }] = await this.db
@@ -53,21 +57,28 @@ export class PostService {
     return Result.ok('Post fetched successfully', null);
   }
 
+  // TODO maybe merge with findAll with a username query
   async getPostsOfUser(ownerUsername: string, requesterId: number) {
     const posts = await this.getPostsByUsername(ownerUsername, requesterId);
-    const parents = new Map(
-      (
-        await this.getMultiplePosts(
-          posts.map((p) => p.parentPostId).filter((e) => e !== null),
-          requesterId,
-        )
-      ).map((p) => [p.id, p]),
-    );
+    let parents: Map<number, any>;
+    const parentPostIds = posts
+      .map((p) => p.parentPostId)
+      .filter((e) => e !== null);
+
+    if (parentPostIds.length > 0) {
+      parents = new Map(
+        (await this.getMultiplePosts(parentPostIds, requesterId)).map((p) => [
+          p.id,
+          p,
+        ]),
+      );
+    }
 
     return Result.ok(
       'Fetched user posts successfully',
       posts.map((p) => ({
         id: p.id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         parentPost: p.parentPostId ? parents.get(p.parentPostId) : undefined,
         owner: p.owner,
         content: p.content,
@@ -104,11 +115,40 @@ export class PostService {
     });
   }
 
-  async update(id: number, dto: UpdatePostDto) {
+  async update(postId: number, dto: UpdatePostDto) {
     return Result.ok('Post updated successfully', null);
   }
 
-  async remove(id: number) {
+  async remove(postId: number) {
+    const [post] = await this.db
+      .select({
+        parentPostId: postTable.parentPostId,
+        mediaId: sql`(group_concat(${mediaTable.id} separator ';'))`,
+        mediaType: sql`(group_concat(${mediaTable.type} separator ';'))`,
+      })
+      .from(postTable)
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
+      .where(eq(postTable.id, postId));
+
+    if (post.parentPostId) {
+      await this.db
+        .update(postStatsTable)
+        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
+        .where(eq(postStatsTable.postId, post.parentPostId));
+    }
+
+    if (post.mediaId) {
+      const ids = (post.mediaId as string).split(';');
+      const types = (post.mediaType as string).split(';');
+      for (let i = 0; i < ids.length; i++) {
+        void this.fileService.removeSingle(
+          ids[i],
+          types[i] as 'image' | 'video',
+        );
+      }
+    }
+
+    await this.db.delete(postTable).where(eq(postTable.id, postId));
     return Result.ok('Post deleted successfully', null);
   }
 

@@ -16,10 +16,7 @@ export class UserService {
         id: userTable.id,
         username: userTable.username,
         displayName: profileTable.displayName,
-        description: profileTable.description,
         profilePicture: profileTable.profilePicture,
-        followerCount: profileTable.followerCount,
-        followingCount: profileTable.followingCount,
         role: userTable.role,
       })
       .from(userTable)

@@ -19,6 +19,7 @@ export class GetRequesterGuard implements CanActivate {
     try {
       const user: JwtUserPayload = this.jwt.verify(authToken);
       req.userId = user.sub;
+      req.userRole = user.role;
     } catch (e) {
       if (e instanceof JsonWebTokenError) {
         throw new UnauthorizedException(e.message);

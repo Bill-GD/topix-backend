@@ -14,6 +14,7 @@ import {
   ConflictException,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpStatus,
   Param,
@@ -81,13 +82,13 @@ export class UserController {
   }
 
   @Delete(':username')
-  @UseGuards(
-    UserExistGuard('username'),
-    AccountOwnerGuard(true),
-    // ResourceOwnerGuard('username', userTable, userTable.id, true),
-  )
+  @UseGuards(UserExistGuard('username'), AccountOwnerGuard(true))
   async deleteProfile(@Param('username') username: string) {
-    await this.userService.deleteUser(username);
+    const res = await this.userService.deleteUser(username);
+
+    if (!res.success) {
+      throw new ForbiddenException(res.message);
+    }
 
     return ControllerResponse.ok(
       'User deleted successfully',

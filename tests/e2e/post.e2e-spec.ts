@@ -35,8 +35,9 @@ describe('Account (e2e)', () => {
     await app.init();
   });
 
-  it(`should return 404 if post doesn't exist`, async () => {
-    return request(app.getHttpServer()).get('/post/0').expect(404);
+  it(`should return 404 if post doesn't exist`, () => {
+    request(app.getHttpServer()).get('/post/0').expect(404);
+    request(app.getHttpServer()).delete('/post/0').expect(404);
   });
 
   afterAll(async () => await app.close());

@@ -3,6 +3,8 @@ import {
   AuthenticatedGuard,
   GetRequesterGuard,
   PostExistGuard,
+  PostOwnerGuard,
+  PostOwnerOrAdminGuard,
 } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
@@ -30,7 +32,6 @@ export class PostController {
 
   @Post()
   @UseGuards(GetRequesterGuard)
-  @ApiController('application/x-www-form-urlencoded')
   async create(@RequesterID() requesterId: number, @Body() dto: CreatePostDto) {
     const res = await this.postService.create(requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
@@ -52,15 +53,20 @@ export class PostController {
   }
 
   @Patch(':id')
-  @UseGuards(PostExistGuard)
-  update(@Param('id') postId: string, @Body() dto: UpdatePostDto) {
-    return this.postService.update(+postId, dto);
+  @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerGuard)
+  async update(
+    @Param('id', ParseIntPipe) postId: number,
+    @Body() dto: UpdatePostDto,
+  ) {
+    const res = await this.postService.update(postId, dto);
+    return ControllerResponse.ok(res.message, null, HttpStatus.OK);
   }
 
   @Delete(':id')
-  @UseGuards(PostExistGuard)
-  remove(@Param('id') postId: string) {
-    return this.postService.remove(+postId);
+  @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerOrAdminGuard)
+  async remove(@Param('id', ParseIntPipe) postId: number) {
+    const res = await this.postService.remove(postId);
+    return ControllerResponse.ok(res.message, null, HttpStatus.OK);
   }
 
   @Patch(':id/react')

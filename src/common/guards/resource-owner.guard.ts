@@ -1,82 +1,64 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
-import { DBType, JwtUserPayload } from '@/common/utils/types';
-import { userTable } from '@/database/schemas';
+import { DBType } from '@/common/utils/types';
+import { postTable, userTable } from '@/database/schemas';
 import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   mixin,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { JsonWebTokenError, JwtService } from '@nestjs/jwt';
 import { eq } from 'drizzle-orm';
 import { MySqlColumn, MySqlTable } from 'drizzle-orm/mysql-core';
 import { Request } from 'express';
 
 /**
  * Checks whether the requesting user is the owner of the requested resource.
- * @param param The param of the URL.
+ * Must use after ResourceExistGuard.
+ * The URL must have the resource ID.
  * @param table The resource SQL table.
  * @param resourceUserIdColumn The column that references it's owner.
  * @param allowAdmin Can admins bypass the check.
  */
-export function ResourceOwnerGuard(
-  param: 'id' | 'username',
+function ResourceOwnerGuard(
   table: MySqlTable,
   resourceUserIdColumn: MySqlColumn,
   allowAdmin: boolean = false,
 ) {
   @Injectable()
   class ResourceOwnerMixin implements CanActivate {
-    constructor(
-      readonly jwt: JwtService,
-      @Inject(DatabaseProviderKey) readonly db: DBType,
-    ) {}
+    constructor(@Inject(DatabaseProviderKey) readonly db: DBType) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-      if (allowAdmin) return true;
-
       const req = context.switchToHttp().getRequest<Request>();
+      if (!req.userId || !req.userRole) {
+        throw new InternalServerErrorException(
+          'User ID or role not found in request.',
+        );
+      }
 
-      // should have authenticated guard before this
-      const authToken = req.headers.authorization!.split(' ')[1];
-      const requestedParam = req.params[param];
+      if (req.userRole === 'admin' && allowAdmin) return true;
+
+      const requestedParam = Number(req.params.id);
 
       let query = this.db
         .select({ id: resourceUserIdColumn })
         .from(table)
         .$dynamic();
-      switch (param) {
-        case 'username':
-          query = query.where(eq(userTable.username, requestedParam));
-          break;
-        case 'id':
-          if (table === userTable) {
-            query = query.where(
-              eq(resourceUserIdColumn, Number(requestedParam)),
-            );
-          } else {
-            query = query
-              .innerJoin(userTable, eq(userTable.id, resourceUserIdColumn))
-              .where(eq(resourceUserIdColumn, Number(requestedParam)));
-          }
-          break;
+
+      if (table === userTable) {
+        query = query.where(eq(resourceUserIdColumn, requestedParam));
+      } else {
+        query = query
+          .innerJoin(userTable, eq(userTable.id, resourceUserIdColumn))
+          .where(eq(resourceUserIdColumn, requestedParam));
       }
+
       const [{ id: ownerId }] = await query;
 
-      let user: JwtUserPayload;
-
-      try {
-        user = this.jwt.verify(authToken);
-      } catch (err) {
-        throw err instanceof JsonWebTokenError
-          ? new UnauthorizedException(err.message)
-          : err;
-      }
-
-      if (user.sub !== Number(ownerId)) {
+      if (req.userId !== Number(ownerId)) {
         throw new ForbiddenException(
           'User does not have access to this action.',
         );
@@ -88,3 +70,10 @@ export function ResourceOwnerGuard(
 
   return mixin(ResourceOwnerMixin);
 }
+
+export const PostOwnerGuard = ResourceOwnerGuard(postTable, postTable.ownerId);
+export const PostOwnerOrAdminGuard = ResourceOwnerGuard(
+  postTable,
+  postTable.ownerId,
+  true,
+);
