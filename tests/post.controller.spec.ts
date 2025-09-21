@@ -1,5 +1,7 @@
 import { Result } from '@/common/utils/result';
+import { CloudinaryModule } from '@/modules/cloudinary.module';
 import { DatabaseModule } from '@/modules/database.module';
+import { FileService } from '@/modules/file/file.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostController } from '@/modules/post/post.controller';
 import { PostService } from '@/modules/post/post.service';
@@ -13,8 +15,8 @@ describe('PostController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PostController],
-      providers: [PostService, JwtService],
-      imports: [DatabaseModule],
+      providers: [PostService, JwtService, FileService],
+      imports: [DatabaseModule, CloudinaryModule],
     }).compile();
 
     controller = module.get(PostController);

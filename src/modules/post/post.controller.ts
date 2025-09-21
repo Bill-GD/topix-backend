@@ -3,8 +3,8 @@ import {
   AuthenticatedGuard,
   GetRequesterGuard,
   PostExistGuard,
-  PostOwnerGuard,
   PostOwnerOrAdminGuard,
+  UserExistGuard,
 } from '@/common/guards';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
@@ -21,7 +21,6 @@ import {
 } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ReactDto } from './dto/react.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
 import { PostService } from './post.service';
 
 @Controller('post')
@@ -37,10 +36,10 @@ export class PostController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
-  @Get()
-  findAll() {
-    return this.postService.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.postService.findAll();
+  // }
 
   @Get(':id')
   @UseGuards(PostExistGuard, GetRequesterGuard)
@@ -52,15 +51,26 @@ export class PostController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
-  @Patch(':id')
-  @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerGuard)
-  async update(
-    @Param('id', ParseIntPipe) postId: number,
-    @Body() dto: UpdatePostDto,
+  @Get('user/:username')
+  @UseGuards(UserExistGuard('username'), GetRequesterGuard)
+  async getUserPosts(
+    @Param('username') username: string,
+    @RequesterID() requesterId: number,
   ) {
-    const res = await this.postService.update(postId, dto);
-    return ControllerResponse.ok(res.message, null, HttpStatus.OK);
+    const res = await this.postService.getPostsOfUser(username, requesterId);
+
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
+
+  // @Patch(':id')
+  // @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerGuard)
+  // async update(
+  //   @Param('id', ParseIntPipe) postId: number,
+  //   @Body() dto: UpdatePostDto,
+  // ) {
+  //   const res = await this.postService.update(postId, dto);
+  //   return ControllerResponse.ok(res.message, null, HttpStatus.OK);
+  // }
 
   @Delete(':id')
   @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerOrAdminGuard)

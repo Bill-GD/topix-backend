@@ -15,7 +15,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class PostService {
@@ -53,9 +52,9 @@ export class PostService {
     return Result.ok('Post uploaded successfully', postId);
   }
 
-  async findAll() {
-    return Result.ok('Post fetched successfully', null);
-  }
+  // async findAll() {
+  //   return Result.ok('Post fetched successfully', null);
+  // }
 
   // TODO maybe merge with findAll with a username query
   async getPostsOfUser(ownerUsername: string, requesterId: number) {
@@ -87,6 +86,7 @@ export class PostService {
         replyCount: p.replyCount,
         mediaPaths: p.mediaPaths,
         dateCreated: p.dateCreated,
+        dateUpdated: p.dateUpdated,
       })),
     );
   }
@@ -112,12 +112,13 @@ export class PostService {
       replyCount: currentPost.replyCount,
       mediaPaths: currentPost.mediaPaths,
       dateCreated: currentPost.dateCreated,
+      dateUpdated: currentPost.dateUpdated,
     });
   }
 
-  async update(postId: number, dto: UpdatePostDto) {
-    return Result.ok('Post updated successfully', null);
-  }
+  // async update(postId: number, dto: UpdatePostDto) {
+  //   return Result.ok('Post updated successfully', null);
+  // }
 
   async remove(postId: number) {
     const [post] = await this.db
@@ -130,13 +131,6 @@ export class PostService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.id, postId));
 
-    if (post.parentPostId) {
-      await this.db
-        .update(postStatsTable)
-        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-        .where(eq(postStatsTable.postId, post.parentPostId));
-    }
-
     if (post.mediaId) {
       const ids = (post.mediaId as string).split(';');
       const types = (post.mediaType as string).split(';');
@@ -146,6 +140,13 @@ export class PostService {
           types[i] as 'image' | 'video',
         );
       }
+    }
+
+    if (post.parentPostId) {
+      await this.db
+        .update(postStatsTable)
+        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
+        .where(eq(postStatsTable.postId, post.parentPostId));
     }
 
     await this.db.delete(postTable).where(eq(postTable.id, postId));
@@ -266,6 +267,7 @@ export class PostService {
         replyCount: p.replyCount,
         mediaPaths: p.media ? (p.media as string).split(';') : [],
         dateCreated: p.dateCreated,
+        dateUpdated: p.dateUpdated,
       })),
     );
   }
@@ -302,6 +304,7 @@ export class PostService {
       replyCount: res[0].replyCount,
       mediaPaths: res[0].media ? (res[0].media as string).split(';') : [],
       dateCreated: res[0].dateCreated,
+      dateUpdated: res[0].dateUpdated,
     };
   }
 
@@ -337,6 +340,7 @@ export class PostService {
       replyCount: r.replyCount,
       mediaPaths: r.media ? (r.media as string).split(';') : [],
       dateCreated: r.dateCreated,
+      dateUpdated: r.dateUpdated,
     }));
   }
 
@@ -375,6 +379,7 @@ export class PostService {
       replyCount: r.replyCount,
       mediaPaths: r.media ? (r.media as string).split(';') : [],
       dateCreated: r.dateCreated,
+      dateUpdated: r.dateUpdated,
     }));
   }
 
@@ -392,6 +397,7 @@ export class PostService {
         replyCount: postStatsTable.replyCount,
         media: sql`(group_concat(${mediaTable.path} separator ';'))`,
         dateCreated: postTable.dateCreated,
+        dateUpdated: postTable.dateUpdated,
       })
       .from(postTable)
       .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
