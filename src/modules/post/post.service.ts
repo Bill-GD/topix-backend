@@ -52,7 +52,7 @@ export class PostService {
     return Result.ok('Post uploaded successfully', postId);
   }
 
-  // async findAll() {
+  // async getAll() {
   //   return Result.ok('Post fetched successfully', null);
   // }
 
@@ -91,7 +91,7 @@ export class PostService {
     );
   }
 
-  async findOne(postId: number, requesterId: number) {
+  async getOne(postId: number, requesterId: number) {
     const currentPost = await this.getSinglePost(postId, requesterId);
     if (!currentPost.parentPostId) {
       return Result.ok('Post fetched successfully', currentPost);

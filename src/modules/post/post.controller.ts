@@ -37,17 +37,17 @@ export class PostController {
   }
 
   // @Get()
-  // findAll() {
+  // getAll() {
   //   return this.postService.findAll();
   // }
 
   @Get(':id')
   @UseGuards(PostExistGuard, GetRequesterGuard)
-  async findOne(
+  async getOne(
     @Param('id', ParseIntPipe) postId: number,
     @RequesterID() requesterId: number,
   ) {
-    const res = await this.postService.findOne(postId, requesterId);
+    const res = await this.postService.getOne(postId, requesterId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
@@ -102,7 +102,7 @@ export class PostController {
 
   @Get(':id/replies')
   @UseGuards(PostExistGuard, GetRequesterGuard)
-  async getPostReplies(
+  async getReplies(
     @Param('id', ParseIntPipe) postId: number,
     @RequesterID() requesterId: number,
   ) {

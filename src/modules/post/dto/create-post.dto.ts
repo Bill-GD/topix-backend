@@ -1,6 +1,6 @@
 import { IsNotEmptyString } from '@/common/decorators';
 import { MediaTypes } from '@/common/utils/types';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class CreatePostDto {
@@ -12,7 +12,7 @@ export class CreatePostDto {
   @IsNotEmptyString()
   type: keyof typeof MediaTypes;
 
-  @ApiProperty({ type: 'array' })
+  @ApiPropertyOptional({ type: 'array' })
   @IsArray()
   @IsOptional()
   mediaPaths?: string[];
