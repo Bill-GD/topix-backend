@@ -1,22 +1,20 @@
-import { ApiController } from '@/common/decorators';
-import { AuthenticatedGuard } from '@/common/guards';
+import { ApiController, RequesterID } from '@/common/decorators';
+import {
+  AuthenticatedGuard,
+  GetRequesterGuard,
+  ThreadExistGuard,
+} from '@/common/guards';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
-  Body,
   Controller,
-  Delete,
   Get,
   HttpStatus,
   Param,
   ParseIntPipe,
-  Patch,
-  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { CreateThreadDto } from './dto/create-thread.dto';
-import { UpdateThreadDto } from './dto/update-thread.dto';
 import { ThreadService } from './thread.service';
 
 @Controller('thread')
@@ -26,16 +24,30 @@ export class ThreadController {
   constructor(private readonly threadService: ThreadService) {}
 
   @Get()
-  getAll(@Query() query: ThreadQuery) {
-    this.threadService.getAll();
-    return ControllerResponse.ok('res.message', 'res.data', HttpStatus.OK);
+  @UseGuards(GetRequesterGuard)
+  async getAll(
+    @Query() query: ThreadQuery,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.threadService.getAll(query, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Get(':id')
+  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  async getOne(
+    @Param('id', ParseIntPipe) threadId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.threadService.getOne(threadId, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   // @Post()
   // createThread(@Body() createThreadDto: CreateThreadDto) {
   //   return this.threadService.create(createThreadDto);
   // }
-  //
+
   // @Post(':id/post')
   // createPost(
   //   @Param('id', ParseIntPipe) threadId: number,
@@ -43,17 +55,7 @@ export class ThreadController {
   // ) {
   //   return this.threadService.create(createThreadDto);
   // }
-  //
-  // @Get(':id')
-  // getOne(@Param('id', ParseIntPipe) threadId: number) {
-  //   return this.threadService.findOne(threadId);
-  // }
-  //
-  // @Get(':id/posts')
-  // getPosts(@Param('id', ParseIntPipe) threadId: number) {
-  //   return this.threadService.findOne(threadId);
-  // }
-  //
+
   // @Patch(':id')
   // update(
   //   @Param('id', ParseIntPipe) threadId: number,
@@ -61,7 +63,7 @@ export class ThreadController {
   // ) {
   //   return this.threadService.update(threadId, updateThreadDto);
   // }
-  //
+
   // @Delete(':id')
   // remove(@Param('id', ParseIntPipe) threadId: number) {
   //   return this.threadService.remove(threadId);

@@ -1,6 +1,6 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
-import { postTable } from '@/database/schemas';
+import { postTable, threadTable } from '@/database/schemas';
 import {
   CanActivate,
   ExecutionContext,
@@ -40,3 +40,4 @@ function ResourceExistGuard(table: MySqlTable, resourceIdColumn: MySqlColumn) {
 }
 
 export const PostExistGuard = ResourceExistGuard(postTable, postTable.id);
+export const ThreadExistGuard = ResourceExistGuard(threadTable, threadTable.id);
