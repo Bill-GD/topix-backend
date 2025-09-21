@@ -1,4 +1,10 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateThreadDto } from './create-thread.dto';
+import { IsNotEmptyString } from '@/common/decorators';
+import { ApiProperty } from '@nestjs/swagger';
+import { Max } from 'class-validator';
 
-export class UpdateThreadDto extends PartialType(CreateThreadDto) {}
+export class UpdateThreadDto {
+  @ApiProperty()
+  @IsNotEmptyString()
+  @Max(255)
+  title: string;
+}

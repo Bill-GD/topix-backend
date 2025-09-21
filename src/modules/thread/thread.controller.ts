@@ -6,12 +6,19 @@ import {
 } from '@/common/guards';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
+import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
+import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -43,29 +50,41 @@ export class ThreadController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
-  // @Post()
-  // createThread(@Body() createThreadDto: CreateThreadDto) {
-  //   return this.threadService.create(createThreadDto);
-  // }
+  @Post()
+  @UseGuards(GetRequesterGuard)
+  async createThread(
+    @RequesterID() requesterId: number,
+    @Body() dto: CreateThreadDto,
+  ) {
+    const res = await this.threadService.create(dto, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
+  }
 
-  // @Post(':id/post')
-  // createPost(
-  //   @Param('id', ParseIntPipe) threadId: number,
-  //   @Body() createThreadDto: CreateThreadDto,
-  // ) {
-  //   return this.threadService.create(createThreadDto);
-  // }
+  @Post(':id/post')
+  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  async addPost(
+    @Param('id', ParseIntPipe) threadId: number,
+    @RequesterID() requesterId: number,
+    @Body() dto: CreatePostDto,
+  ) {
+    const res = await this.threadService.addPost(threadId, requesterId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
+  }
 
-  // @Patch(':id')
-  // update(
-  //   @Param('id', ParseIntPipe) threadId: number,
-  //   @Body() updateThreadDto: UpdateThreadDto,
-  // ) {
-  //   return this.threadService.update(threadId, updateThreadDto);
-  // }
+  @Patch(':id')
+  @UseGuards(ThreadExistGuard)
+  async update(
+    @Param('id', ParseIntPipe) threadId: number,
+    @Body() dto: UpdateThreadDto,
+  ) {
+    const res = await this.threadService.update(threadId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
 
   // @Delete(':id')
-  // remove(@Param('id', ParseIntPipe) threadId: number) {
-  //   return this.threadService.remove(threadId);
+  // @UseGuards(ThreadExistGuard)
+  // async remove(@Param('id', ParseIntPipe) threadId: number) {
+  //   const res = await this.threadService.remove(threadId);
+  //   return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   // }
 }

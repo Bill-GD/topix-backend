@@ -3,14 +3,20 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  mediaTable,
+  postStatsTable,
+  postTable,
   profileTable,
   tagTable,
   threadFollowTable,
   threadTable,
   userTable,
 } from '@/database/schemas';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
+import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
+import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq, isNull, or } from 'drizzle-orm';
+import { desc, eq, isNull, or, sql } from 'drizzle-orm';
 
 @Injectable()
 export class ThreadService {
@@ -44,16 +50,61 @@ export class ThreadService {
     return Result.ok('Fetched thread successfully', thread);
   }
 
-  // create(createThreadDto: CreateThreadDto) {
-  //   return 'This action adds a new thread';
-  // }
+  async create(dto: CreateThreadDto, requesterId: number) {
+    const [{ id: threadId }] = await this.db
+      .insert(threadTable)
+      .values({
+        ownerId: requesterId,
+        title: dto.title,
+      })
+      .$returningId();
+    return Result.ok('Thread created successfully', threadId);
+  }
 
-  // update(id: number, updateThreadDto: UpdateThreadDto) {
-  //   return `This action updates a #${id} thread`;
-  // }
+  async addPost(threadId: number, ownerId: number, dto: CreatePostDto) {
+    const [{ id: postId }] = await this.db
+      .insert(postTable)
+      .values({
+        ownerId: ownerId,
+        threadId: threadId,
+        content: dto.content,
+      })
+      .$returningId();
 
-  // remove(id: number) {
-  //   return `This action removes a #${id} thread`;
+    await this.db.insert(postStatsTable).values({ postId });
+    await this.db
+      .update(threadTable)
+      .set({ postCount: sql`${threadTable.postCount} + 1` })
+      .where(eq(threadTable.id, threadId));
+
+    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
+      await this.db.insert(mediaTable).values(
+        dto.mediaPaths.map((m) => {
+          const segments = m.split('/');
+          const publicId = segments[segments.length - 1].split('.')[0];
+
+          return {
+            id: publicId,
+            postId,
+            type: dto.type,
+            path: m,
+          };
+        }),
+      );
+    }
+    return Result.ok('Post added the thread successfully', null);
+  }
+
+  async update(threadId: number, dto: UpdateThreadDto) {
+    await this.db
+      .update(threadTable)
+      .set({ title: dto.title })
+      .where(eq(threadTable.id, threadId));
+    return Result.ok('Updated thread successfully', null);
+  }
+
+  // async remove(threadId: number) {
+  //   return Result.ok('Deleted thread successfully', null);
   // }
 
   private getThreadQuery(requesterId: number) {
