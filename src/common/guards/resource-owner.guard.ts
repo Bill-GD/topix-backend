@@ -1,6 +1,6 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
-import { postTable, userTable } from '@/database/schemas';
+import { postTable, threadTable, userTable } from '@/database/schemas';
 import {
   CanActivate,
   ExecutionContext,
@@ -16,7 +16,7 @@ import { Request } from 'express';
 
 /**
  * Checks whether the requesting user is the owner of the requested resource.
- * Must use after ResourceExistGuard.
+ * Must use after ResourceExistGuard and GetRequesterGuard.
  * The URL must have the resource ID.
  * @param table The resource SQL table.
  * @param resourceUserIdColumn The column that references it's owner.
@@ -76,4 +76,8 @@ export const PostOwnerOrAdminGuard = ResourceOwnerGuard(
   postTable,
   postTable.ownerId,
   true,
+);
+export const ThreadOwnerGuard = ResourceOwnerGuard(
+  threadTable,
+  threadTable.ownerId,
 );

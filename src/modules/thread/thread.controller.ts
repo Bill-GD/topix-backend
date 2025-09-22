@@ -3,6 +3,7 @@ import {
   AuthenticatedGuard,
   GetRequesterGuard,
   ThreadExistGuard,
+  ThreadOwnerGuard,
 } from '@/common/guards';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
@@ -61,7 +62,7 @@ export class ThreadController {
   }
 
   @Post(':id/post')
-  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
   async addPost(
     @Param('id', ParseIntPipe) threadId: number,
     @RequesterID() requesterId: number,
@@ -72,7 +73,7 @@ export class ThreadController {
   }
 
   @Patch(':id')
-  @UseGuards(ThreadExistGuard)
+  @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
   async update(
     @Param('id', ParseIntPipe) threadId: number,
     @Body() dto: UpdateThreadDto,
@@ -81,10 +82,10 @@ export class ThreadController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
-  // @Delete(':id')
-  // @UseGuards(ThreadExistGuard)
-  // async remove(@Param('id', ParseIntPipe) threadId: number) {
-  //   const res = await this.threadService.remove(threadId);
-  //   return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
-  // }
+  @Delete(':id')
+  @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
+  async remove(@Param('id', ParseIntPipe) threadId: number) {
+    const res = await this.threadService.remove(threadId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
 }

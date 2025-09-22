@@ -12,6 +12,7 @@ import {
   threadTable,
   userTable,
 } from '@/database/schemas';
+import { FileService } from '@/modules/file/file.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
@@ -20,7 +21,10 @@ import { desc, eq, isNull, or, sql } from 'drizzle-orm';
 
 @Injectable()
 export class ThreadService {
-  constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
+  constructor(
+    @Inject(DatabaseProviderKey) private readonly db: DBType,
+    private readonly fileService: FileService,
+  ) {}
 
   async getAll(threadQuery: ThreadQuery, requesterId: number) {
     let query = this.getThreadQuery(requesterId);
@@ -103,9 +107,23 @@ export class ThreadService {
     return Result.ok('Updated thread successfully', null);
   }
 
-  // async remove(threadId: number) {
-  //   return Result.ok('Deleted thread successfully', null);
-  // }
+  async remove(threadId: number) {
+    const mediaList = await this.db
+      .select({
+        mediaId: mediaTable.id,
+        mediaType: mediaTable.type,
+      })
+      .from(mediaTable)
+      .innerJoin(postTable, eq(mediaTable.postId, postTable.id))
+      .where(eq(postTable.threadId, threadId));
+
+    mediaList.forEach((m) => {
+      void this.fileService.removeSingle(m.mediaId, m.mediaType);
+    });
+
+    await this.db.delete(threadTable).where(eq(threadTable.id, threadId));
+    return Result.ok('Deleted thread successfully', null);
+  }
 
   private getThreadQuery(requesterId: number) {
     return this.db
@@ -113,11 +131,12 @@ export class ThreadService {
         id: threadTable.id,
         title: threadTable.title,
         groupId: threadTable.groupId,
-        tag: tagTable.name,
-        tagColor: tagTable.colorHex,
-        username: userTable.username,
-        displayName: profileTable.displayName,
-        profilePicture: profileTable.profilePicture,
+        tag: { name: tagTable.name, color: tagTable.colorHex },
+        owner: {
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        },
         postCount: threadTable.postCount,
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
