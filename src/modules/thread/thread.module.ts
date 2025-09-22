@@ -1,11 +1,11 @@
-import { FileModule } from '@/modules/file/file.module';
+import { PostModule } from '@/modules/post/post.module';
 import { Module } from '@nestjs/common';
-import { ThreadService } from './thread.service';
 import { ThreadController } from './thread.controller';
+import { ThreadService } from './thread.service';
 
 @Module({
   controllers: [ThreadController],
   providers: [ThreadService],
-  imports: [FileModule],
+  imports: [PostModule],
 })
 export class ThreadModule {}

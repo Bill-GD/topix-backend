@@ -218,36 +218,39 @@ export class PostService {
   }
 
   async remove(postId: number) {
-    const [post] = await this.db
+    await this.removeMultiplePosts([postId]);
+    return Result.ok('Post deleted successfully', null);
+  }
+
+  async removeMultiplePosts(postIds: number[]) {
+    const posts = await this.db
       .select({
         parentPostId: postTable.parentPostId,
-        mediaId: sql`(group_concat(${mediaTable.id} separator ';'))`,
-        mediaType: sql`(group_concat(${mediaTable.type} separator ';'))`,
+        media: {
+          id: mediaTable.id,
+          type: mediaTable.type,
+        },
       })
       .from(postTable)
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
-      .where(eq(postTable.id, postId));
+      .where(inArray(postTable.id, postIds));
 
-    if (post.mediaId) {
-      const ids = (post.mediaId as string).split(';');
-      const types = (post.mediaType as string).split(';');
-      for (let i = 0; i < ids.length; i++) {
-        void this.fileService.removeSingle(
-          ids[i],
-          types[i] as 'image' | 'video',
-        );
+    for (const p of posts) {
+      if (p.media) {
+        void this.fileService.removeSingle(p.media.id, p.media.type);
       }
     }
 
-    if (post.parentPostId) {
-      await this.db
-        .update(postStatsTable)
-        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-        .where(eq(postStatsTable.postId, post.parentPostId));
+    for (const p of posts) {
+      if (p.parentPostId) {
+        await this.db
+          .update(postStatsTable)
+          .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
+          .where(eq(postStatsTable.postId, p.parentPostId));
+      }
     }
 
-    await this.db.delete(postTable).where(eq(postTable.id, postId));
-    return Result.ok('Post deleted successfully', null);
+    await this.db.delete(postTable).where(inArray(postTable.id, postIds));
   }
 
   private async getSinglePost(postId: number, requesterId: number) {

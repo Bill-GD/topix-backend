@@ -12,8 +12,8 @@ import {
   threadTable,
   userTable,
 } from '@/database/schemas';
-import { FileService } from '@/modules/file/file.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
+import { PostService } from '@/modules/post/post.service';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
 import { Inject, Injectable } from '@nestjs/common';
@@ -23,7 +23,7 @@ import { desc, eq, isNull, or, sql } from 'drizzle-orm';
 export class ThreadService {
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
-    private readonly fileService: FileService,
+    private readonly postService: PostService,
   ) {}
 
   async getAll(threadQuery: ThreadQuery, requesterId: number) {
@@ -108,19 +108,12 @@ export class ThreadService {
   }
 
   async remove(threadId: number) {
-    const mediaList = await this.db
-      .select({
-        mediaId: mediaTable.id,
-        mediaType: mediaTable.type,
-      })
-      .from(mediaTable)
-      .innerJoin(postTable, eq(mediaTable.postId, postTable.id))
+    const posts = await this.db
+      .select({ id: postTable.id })
+      .from(postTable)
       .where(eq(postTable.threadId, threadId));
 
-    mediaList.forEach((m) => {
-      void this.fileService.removeSingle(m.mediaId, m.mediaType);
-    });
-
+    await this.postService.removeMultiplePosts(posts.map((p) => p.id));
     await this.db.delete(threadTable).where(eq(threadTable.id, threadId));
     return Result.ok('Deleted thread successfully', null);
   }
@@ -130,7 +123,6 @@ export class ThreadService {
       .select({
         id: threadTable.id,
         title: threadTable.title,
-        groupId: threadTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
         owner: {
           username: userTable.username,
@@ -138,6 +130,7 @@ export class ThreadService {
           profilePicture: profileTable.profilePicture,
         },
         postCount: threadTable.postCount,
+        groupId: threadTable.groupId,
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
       })
