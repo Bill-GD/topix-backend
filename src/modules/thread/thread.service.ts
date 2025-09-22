@@ -123,7 +123,6 @@ export class ThreadService {
       .select({
         id: threadTable.id,
         title: threadTable.title,
-        tag: { name: tagTable.name, color: tagTable.colorHex },
         owner: {
           username: userTable.username,
           displayName: profileTable.displayName,
@@ -131,6 +130,7 @@ export class ThreadService {
         },
         postCount: threadTable.postCount,
         groupId: threadTable.groupId,
+        tag: { name: tagTable.name, color: tagTable.colorHex },
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
       })

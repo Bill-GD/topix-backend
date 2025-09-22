@@ -254,21 +254,21 @@ export class PostService {
   }
 
   private async getSinglePost(postId: number, requesterId: number) {
-    const res = await this.getPostQuery(requesterId).where(
+    const [res] = await this.getPostQuery(requesterId).where(
       eq(postTable.id, postId),
     );
 
     return {
-      id: res[0].id,
-      owner: res[0].owner,
-      parentPostId: res[0].parentPostId,
-      content: res[0].content,
-      reaction: res[0].reaction,
-      reactionCount: res[0].reactionCount,
-      replyCount: res[0].replyCount,
-      mediaPaths: res[0].media ? (res[0].media as string).split(';') : [],
-      dateCreated: res[0].dateCreated,
-      dateUpdated: res[0].dateUpdated,
+      id: res.id,
+      owner: res.owner,
+      parentPostId: res.parentPostId,
+      content: res.content,
+      reaction: res.reaction,
+      reactionCount: res.reactionCount,
+      replyCount: res.replyCount,
+      mediaPaths: res.media ? (res.media as string).split(';') : [],
+      dateCreated: res.dateCreated,
+      dateUpdated: res.dateUpdated,
     };
   }
 
