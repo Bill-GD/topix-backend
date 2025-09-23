@@ -1,26 +1,26 @@
 import { IsOptionalString } from '@/common/decorators';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'user123',
     description: 'The unique handle of an user.',
   })
   @IsOptionalString()
   username?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'User 123',
     description: 'The display name of an user.',
   })
   @IsOptionalString()
   displayName?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsOptionalString()
   description?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsOptionalString()
   profilePicture?: string;
 }

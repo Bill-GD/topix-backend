@@ -6,6 +6,7 @@ import {
   PostOwnerOrAdminGuard,
   UserExistGuard,
 } from '@/common/guards';
+import { PostQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
   Body,
@@ -17,6 +18,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -36,29 +38,20 @@ export class PostController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
-  // @Get()
-  // findAll() {
-  //   return this.postService.findAll();
-  // }
-
-  @Get(':id')
-  @UseGuards(PostExistGuard, GetRequesterGuard)
-  async findOne(
-    @Param('id', ParseIntPipe) postId: number,
-    @RequesterID() requesterId: number,
-  ) {
-    const res = await this.postService.findOne(postId, requesterId);
+  @Get()
+  @UseGuards(GetRequesterGuard)
+  async getAll(@Query() query: PostQuery, @RequesterID() requesterId: number) {
+    const res = await this.postService.getAll(query, requesterId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
-  @Get('user/:username')
-  @UseGuards(UserExistGuard('username'), GetRequesterGuard)
-  async getUserPosts(
-    @Param('username') username: string,
+  @Get(':id')
+  @UseGuards(PostExistGuard, GetRequesterGuard)
+  async getOne(
+    @Param('id', ParseIntPipe) postId: number,
     @RequesterID() requesterId: number,
   ) {
-    const res = await this.postService.getPostsOfUser(username, requesterId);
-
+    const res = await this.postService.getOne(postId, requesterId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
@@ -97,16 +90,6 @@ export class PostController {
     @RequesterID() requesterId: number,
   ) {
     const res = await this.postService.removeReaction(postId, requesterId);
-    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
-  }
-
-  @Get(':id/replies')
-  @UseGuards(PostExistGuard, GetRequesterGuard)
-  async getPostReplies(
-    @Param('id', ParseIntPipe) postId: number,
-    @RequesterID() requesterId: number,
-  ) {
-    const res = await this.postService.getPostReplies(postId, requesterId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

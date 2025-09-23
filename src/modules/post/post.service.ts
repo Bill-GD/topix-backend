@@ -1,3 +1,4 @@
+import { PostQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
@@ -7,6 +8,7 @@ import {
   postTable,
   profileTable,
   reactionTable,
+  tagTable,
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
@@ -52,13 +54,29 @@ export class PostService {
     return Result.ok('Post uploaded successfully', postId);
   }
 
-  // async findAll() {
-  //   return Result.ok('Post fetched successfully', null);
-  // }
+  async getAll(postQuery: PostQuery, requesterId: number) {
+    let query = this.getPostQuery(requesterId);
+    if (postQuery.username) {
+      query = query.where(eq(userTable.username, postQuery.username));
+    }
+    if (postQuery.tag) {
+      query = query.where(eq(tagTable.name, postQuery.tag));
+    }
+    if (postQuery.parentId) {
+      query = query.where(eq(postTable.parentPostId, postQuery.parentId));
+    }
+    if (postQuery.groupId) {
+      query = query.where(eq(postTable.groupId, postQuery.groupId));
+    }
+    if (postQuery.threadId) {
+      query = query.where(eq(postTable.threadId, postQuery.threadId));
+    }
 
-  // TODO maybe merge with findAll with a username query
-  async getPostsOfUser(ownerUsername: string, requesterId: number) {
-    const posts = await this.getPostsByUsername(ownerUsername, requesterId);
+    const posts = await query
+      .orderBy(desc(postTable.dateCreated))
+      .offset(postQuery.offset)
+      .limit(postQuery.limit);
+
     let parents: Map<number, any>;
     const parentPostIds = posts
       .map((p) => p.parentPostId)
@@ -74,24 +92,25 @@ export class PostService {
     }
 
     return Result.ok(
-      'Fetched user posts successfully',
+      'Fetched posts successfully',
       posts.map((p) => ({
         id: p.id,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        parentPost: p.parentPostId ? parents.get(p.parentPostId) : undefined,
+        parentPost:
+          p.parentPostId !== null ? parents.get(p.parentPostId) : undefined,
         owner: p.owner,
         content: p.content,
         reaction: p.reaction,
         reactionCount: p.reactionCount,
         replyCount: p.replyCount,
-        mediaPaths: p.mediaPaths,
+        mediaPaths: p.media ? (p.media as string).split(';') : [],
         dateCreated: p.dateCreated,
         dateUpdated: p.dateUpdated,
       })),
     );
   }
 
-  async findOne(postId: number, requesterId: number) {
+  async getOne(postId: number, requesterId: number) {
     const currentPost = await this.getSinglePost(postId, requesterId);
     if (!currentPost.parentPostId) {
       return Result.ok('Post fetched successfully', currentPost);
@@ -119,39 +138,6 @@ export class PostService {
   // async update(postId: number, dto: UpdatePostDto) {
   //   return Result.ok('Post updated successfully', null);
   // }
-
-  async remove(postId: number) {
-    const [post] = await this.db
-      .select({
-        parentPostId: postTable.parentPostId,
-        mediaId: sql`(group_concat(${mediaTable.id} separator ';'))`,
-        mediaType: sql`(group_concat(${mediaTable.type} separator ';'))`,
-      })
-      .from(postTable)
-      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
-      .where(eq(postTable.id, postId));
-
-    if (post.mediaId) {
-      const ids = (post.mediaId as string).split(';');
-      const types = (post.mediaType as string).split(';');
-      for (let i = 0; i < ids.length; i++) {
-        void this.fileService.removeSingle(
-          ids[i],
-          types[i] as 'image' | 'video',
-        );
-      }
-    }
-
-    if (post.parentPostId) {
-      await this.db
-        .update(postStatsTable)
-        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-        .where(eq(postStatsTable.postId, post.parentPostId));
-    }
-
-    await this.db.delete(postTable).where(eq(postTable.id, postId));
-    return Result.ok('Post deleted successfully', null);
-  }
 
   async updateReaction(postId: number, userId: number, dto: ReactDto) {
     const res = await this.db.$count(
@@ -231,108 +217,69 @@ export class PostService {
     return Result.ok('Posted reply successfully', null);
   }
 
-  async getPostReplies(postId: number, requesterId: number) {
-    const posts = await this.getPostQuery()
-      .where(
-        and(
-          or(
-            eq(reactionTable.userId, requesterId),
-            isNull(reactionTable.userId),
-          ),
-          eq(postTable.parentPostId, postId),
-        ),
-      )
-      .groupBy(
-        postTable.id,
-        reactionTable.type,
-        postStatsTable.reactionCount,
-        postStatsTable.replyCount,
-        postTable.dateCreated,
-      )
-      .orderBy(desc(postTable.dateCreated))
-      .limit(10);
+  async remove(postId: number) {
+    await this.removeMultiplePosts([postId]);
+    return Result.ok('Post deleted successfully', null);
+  }
 
-    return Result.ok(
-      'Fetched post replies successfully',
-      posts.map((p) => ({
-        id: p.id,
-        owner: {
-          username: p.username,
-          displayName: p.displayName,
-          profilePicture: p.profilePicture,
+  async removeMultiplePosts(postIds: number[]) {
+    const posts = await this.db
+      .select({
+        parentPostId: postTable.parentPostId,
+        media: {
+          id: mediaTable.id,
+          type: mediaTable.type,
         },
-        content: p.content,
-        reaction: p.reaction,
-        reactionCount: p.reactionCount,
-        replyCount: p.replyCount,
-        mediaPaths: p.media ? (p.media as string).split(';') : [],
-        dateCreated: p.dateCreated,
-        dateUpdated: p.dateUpdated,
-      })),
-    );
+      })
+      .from(postTable)
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
+      .where(inArray(postTable.id, postIds));
+
+    for (const p of posts) {
+      if (p.media) {
+        void this.fileService.removeSingle(p.media.id, p.media.type);
+      }
+    }
+
+    for (const p of posts) {
+      if (p.parentPostId) {
+        await this.db
+          .update(postStatsTable)
+          .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
+          .where(eq(postStatsTable.postId, p.parentPostId));
+      }
+    }
+
+    await this.db.delete(postTable).where(inArray(postTable.id, postIds));
   }
 
   private async getSinglePost(postId: number, requesterId: number) {
-    const res = await this.getPostQuery()
-      .where(
-        and(
-          or(
-            eq(reactionTable.userId, requesterId),
-            isNull(reactionTable.userId),
-          ),
-          eq(postTable.id, postId),
-        ),
-      )
-      .groupBy(
-        postTable.id,
-        reactionTable.type,
-        postStatsTable.reactionCount,
-        postStatsTable.replyCount,
-      );
+    const [res] = await this.getPostQuery(requesterId).where(
+      eq(postTable.id, postId),
+    );
 
     return {
-      id: res[0].id,
-      owner: {
-        username: res[0].username,
-        displayName: res[0].displayName,
-        profilePicture: res[0].profilePicture,
-      },
-      parentPostId: res[0].parentPostId,
-      content: res[0].content,
-      reaction: res[0].reaction,
-      reactionCount: res[0].reactionCount,
-      replyCount: res[0].replyCount,
-      mediaPaths: res[0].media ? (res[0].media as string).split(';') : [],
-      dateCreated: res[0].dateCreated,
-      dateUpdated: res[0].dateUpdated,
+      id: res.id,
+      owner: res.owner,
+      parentPostId: res.parentPostId,
+      content: res.content,
+      reaction: res.reaction,
+      reactionCount: res.reactionCount,
+      replyCount: res.replyCount,
+      mediaPaths: res.media ? (res.media as string).split(';') : [],
+      dateCreated: res.dateCreated,
+      dateUpdated: res.dateUpdated,
     };
   }
 
   private async getMultiplePosts(postIds: number[], requesterId: number) {
-    const res = await this.getPostQuery()
-      .where(
-        and(
-          or(
-            eq(reactionTable.userId, requesterId),
-            isNull(reactionTable.userId),
-          ),
-          inArray(postTable.id, postIds),
-        ),
-      )
-      .groupBy(
-        postTable.id,
-        reactionTable.type,
-        postStatsTable.reactionCount,
-        postStatsTable.replyCount,
-      );
+    const res = await this.getPostQuery(requesterId).where(
+      inArray(postTable.id, postIds),
+    );
 
     return res.map((r) => ({
       id: r.id,
-      owner: {
-        username: r.username,
-        displayName: r.displayName,
-        profilePicture: r.profilePicture,
-      },
+      owner: r.owner,
       parentPostId: r.parentPostId,
       content: r.content,
       reaction: r.reaction,
@@ -344,58 +291,25 @@ export class PostService {
     }));
   }
 
-  private async getPostsByUsername(ownerUsername: string, requesterId: number) {
-    const res = await this.getPostQuery()
-      .where(
-        and(
-          or(
-            eq(reactionTable.userId, requesterId),
-            isNull(reactionTable.userId),
-          ),
-          eq(userTable.username, ownerUsername),
-        ),
-      )
-      .groupBy(
-        postTable.id,
-        reactionTable.type,
-        postStatsTable.reactionCount,
-        postStatsTable.replyCount,
-        postTable.dateCreated,
-      )
-      .orderBy(desc(postTable.dateCreated))
-      .limit(10);
-
-    return res.map((r) => ({
-      id: r.id,
-      owner: {
-        username: r.username,
-        displayName: r.displayName,
-        profilePicture: r.profilePicture,
-      },
-      parentPostId: r.parentPostId,
-      content: r.content,
-      reaction: r.reaction,
-      reactionCount: r.reactionCount,
-      replyCount: r.replyCount,
-      mediaPaths: r.media ? (r.media as string).split(';') : [],
-      dateCreated: r.dateCreated,
-      dateUpdated: r.dateUpdated,
-    }));
-  }
-
-  private getPostQuery() {
+  private getPostQuery(requesterId: number) {
     return this.db
       .select({
         id: postTable.id,
-        parentPostId: postTable.parentPostId,
-        username: userTable.username,
-        displayName: profileTable.displayName,
-        profilePicture: profileTable.profilePicture,
+        owner: {
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        },
         content: postTable.content,
         reaction: reactionTable.type,
         reactionCount: postStatsTable.reactionCount,
         replyCount: postStatsTable.replyCount,
         media: sql`(group_concat(${mediaTable.path} separator ';'))`,
+        parentPostId: postTable.parentPostId,
+        threadId: postTable.threadId,
+        groupId: postTable.groupId,
+        tag: { name: tagTable.name, color: tagTable.colorHex },
+        groupAccepted: postTable.groupAccepted,
         dateCreated: postTable.dateCreated,
         dateUpdated: postTable.dateUpdated,
       })
@@ -405,6 +319,17 @@ export class PostService {
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
       .leftJoin(reactionTable, eq(reactionTable.postId, postTable.id))
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
+      .leftJoin(tagTable, eq(postTable.tagId, tagTable.id))
+      .where(
+        or(eq(reactionTable.userId, requesterId), isNull(reactionTable.userId)),
+      )
+      .groupBy(
+        postTable.id,
+        reactionTable.type,
+        postStatsTable.reactionCount,
+        postStatsTable.replyCount,
+        postTable.dateCreated,
+      )
       .$dynamic();
   }
 }

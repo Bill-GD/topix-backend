@@ -1,6 +1,6 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
-import { postTable, userTable } from '@/database/schemas';
+import { postTable, threadTable } from '@/database/schemas';
 import {
   CanActivate,
   ExecutionContext,
@@ -16,15 +16,17 @@ import { Request } from 'express';
 
 /**
  * Checks whether the requesting user is the owner of the requested resource.
- * Must use after ResourceExistGuard.
+ * Must use after ResourceExistGuard and GetRequesterGuard.
  * The URL must have the resource ID.
  * @param table The resource SQL table.
  * @param resourceUserIdColumn The column that references it's owner.
+ * @param resourceIdColumn The column uniquely identify the resource.
  * @param allowAdmin Can admins bypass the check.
  */
 function ResourceOwnerGuard(
   table: MySqlTable,
   resourceUserIdColumn: MySqlColumn,
+  resourceIdColumn: MySqlColumn,
   allowAdmin: boolean = false,
 ) {
   @Injectable()
@@ -43,20 +45,10 @@ function ResourceOwnerGuard(
 
       const requestedParam = Number(req.params.id);
 
-      let query = this.db
+      const [{ id: ownerId }] = await this.db
         .select({ id: resourceUserIdColumn })
         .from(table)
-        .$dynamic();
-
-      if (table === userTable) {
-        query = query.where(eq(resourceUserIdColumn, requestedParam));
-      } else {
-        query = query
-          .innerJoin(userTable, eq(userTable.id, resourceUserIdColumn))
-          .where(eq(resourceUserIdColumn, requestedParam));
-      }
-
-      const [{ id: ownerId }] = await query;
+        .where(eq(resourceIdColumn, requestedParam));
 
       if (req.userId !== Number(ownerId)) {
         throw new ForbiddenException(
@@ -71,9 +63,19 @@ function ResourceOwnerGuard(
   return mixin(ResourceOwnerMixin);
 }
 
-export const PostOwnerGuard = ResourceOwnerGuard(postTable, postTable.ownerId);
+export const PostOwnerGuard = ResourceOwnerGuard(
+  postTable,
+  postTable.ownerId,
+  postTable.id,
+);
 export const PostOwnerOrAdminGuard = ResourceOwnerGuard(
   postTable,
   postTable.ownerId,
+  postTable.id,
   true,
+);
+export const ThreadOwnerGuard = ResourceOwnerGuard(
+  threadTable,
+  threadTable.ownerId,
+  threadTable.id,
 );

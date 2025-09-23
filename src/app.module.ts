@@ -6,6 +6,7 @@ import { DatabaseModule } from '@/modules/database.module';
 import { FileModule } from '@/modules/file/file.module';
 import { MailerModule } from '@/modules/mailer/mailer.module';
 import { PostModule } from '@/modules/post/post.module';
+import { ThreadModule } from '@/modules/thread/thread.module';
 import { UserModule } from '@/modules/user/user.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
@@ -27,6 +28,7 @@ import * as process from 'node:process';
     UserModule,
     FileModule,
     PostModule,
+    ThreadModule,
   ],
   providers: [],
 })
