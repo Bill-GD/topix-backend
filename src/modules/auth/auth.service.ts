@@ -5,10 +5,10 @@ import { otpTable, profileTable, userTable } from '@/database/schemas';
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { CryptoService } from '@/modules/crypto/crypto.service';
 import { MailerService } from '@/modules/mailer/mailer.service';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { and, eq } from 'drizzle-orm';
 import { RegisterDto } from './dto/register.dto';
-import { Inject, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
@@ -108,8 +108,6 @@ export class AuthService {
     const [user] = await this.db
       .select({
         id: userTable.id,
-        username: userTable.username,
-        email: userTable.email,
         password: userTable.password,
         role: userTable.role,
       })
@@ -133,6 +131,32 @@ export class AuthService {
       refreshToken: this.crypto.encrypt(
         this.jwt.sign({ ...payload, type: 'refresh' }, { expiresIn: '2w' }),
       ),
+      // in seconds
+      atTime: 86400,
+      rtTime: 1209600,
+    });
+  }
+
+  async refresh(requesterId: number) {
+    const [user] = await this.db
+      .select({
+        id: userTable.id,
+        role: userTable.role,
+      })
+      .from(userTable)
+      .where(eq(userTable.id, requesterId))
+      .limit(1);
+
+    const payload: Omit<JwtUserPayload, 'type'> = {
+      sub: user.id,
+      role: user.role,
+    };
+
+    return Result.ok('Refreshed token successfully.', {
+      token: this.crypto.encrypt(
+        this.jwt.sign({ ...payload, type: 'access' }, { expiresIn: '1d' }),
+      ),
+      time: 86400,
     });
   }
 

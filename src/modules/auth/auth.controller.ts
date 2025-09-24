@@ -3,6 +3,7 @@ import {
   AccountInfoGuard,
   AuthenticatedGuard,
   GetRequesterGuard,
+  RefreshTokenGuard,
   UserExistGuard,
   UserVerifiedGuard,
 } from '@/common/guards';
@@ -28,6 +29,13 @@ import {
 @ApiController()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('refresh')
+  @UseGuards(RefreshTokenGuard, GetRequesterGuard)
+  async refreshAccess(@RequesterID() requesterId: number) {
+    const res = await this.authService.refresh(requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
 
   @Post('password-check')
   @UseGuards(AuthenticatedGuard, GetRequesterGuard)

@@ -4,5 +4,6 @@ export { UserVerifiedGuard } from './user-verified.guard';
 export { AuthenticatedGuard } from './authenticated.guard';
 export { AccountOwnerGuard } from './account-owner.guard';
 export { GetRequesterGuard } from './get-requester.guard';
+export { RefreshTokenGuard } from './refresh-token.guard';
 export * from './resource-owner.guard';
 export * from './resource-exist.guard';
