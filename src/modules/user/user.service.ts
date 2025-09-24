@@ -76,7 +76,7 @@ export class UserService {
         .where(eq(profileTable.userId, id));
     }
 
-    return Result.ok('User profile updated successfully', null);
+    return Result.ok('Updated user profile successfully.', null);
   }
 
   async deleteUser(username: string): Promise<Result<null>> {
@@ -86,6 +86,6 @@ export class UserService {
     }
 
     await this.db.delete(userTable).where(eq(userTable.id, user.id));
-    return Result.ok('Success', null);
+    return Result.ok('Deleted account successfully.', null);
   }
 }

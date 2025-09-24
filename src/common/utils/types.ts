@@ -1,9 +1,12 @@
+import { v2 } from 'cloudinary';
 import { MySql2Database } from 'drizzle-orm/mysql2';
 import * as mysql from 'mysql2/promise';
 
 export type DBType = MySql2Database<Record<string, unknown>> & {
   $client: mysql.Pool;
 };
+
+export type Cloudinary = typeof v2;
 
 export type JwtUserPayload = {
   sub: number;
@@ -40,27 +43,3 @@ export const NotificationActions = {
   updateThread: 'update_thread',
   follow: 'follow',
 } as const;
-
-export type CloudinaryUploadResponse = {
-  asset_id: string;
-  public_id: string;
-  version: number;
-  version_id: string;
-  signature: string;
-  width: number;
-  height: number;
-  format: string;
-  resource_type: string;
-  created_at: string;
-  tags: string[];
-  bytes: number;
-  type: string;
-  etag: string;
-  placeholder: boolean;
-  url: string;
-  secure_url: string;
-  asset_folder: string;
-  display_name: string;
-  original_filename: string;
-  api_key: string;
-};

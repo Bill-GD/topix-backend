@@ -33,7 +33,7 @@ export class UserController {
     const user = await this.userService.getUserById(requesterId);
 
     return ControllerResponse.ok(
-      'Fetched user successfully',
+      'Fetched user successfully.',
       user,
       HttpStatus.OK,
     );
@@ -45,7 +45,7 @@ export class UserController {
     const user = await this.userService.getUserByUsername(username);
 
     return ControllerResponse.ok(
-      'Fetched user successfully',
+      'Fetched user successfully.',
       user,
       HttpStatus.OK,
     );
@@ -75,10 +75,6 @@ export class UserController {
       throw new ForbiddenException(res.message);
     }
 
-    return ControllerResponse.ok(
-      'User deleted successfully',
-      null,
-      HttpStatus.OK,
-    );
+    return ControllerResponse.ok(res.message, null, HttpStatus.OK);
   }
 }

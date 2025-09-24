@@ -126,7 +126,7 @@ export class AuthService {
       role: user.role,
     };
 
-    return Result.ok('User logged in successfully', {
+    return Result.ok('Signed in successfully.', {
       accessToken: this.crypto.encrypt(
         this.jwt.sign({ ...payload, type: 'access' }, { expiresIn: '1d' }),
       ),

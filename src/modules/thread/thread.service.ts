@@ -48,7 +48,7 @@ export class ThreadService {
       .limit(threadQuery.limit)
       .offset(threadQuery.offset);
 
-    return Result.ok('Fetched threads successfully', threads);
+    return Result.ok('Fetched threads successfully.', threads);
   }
 
   async getOne(threadId: number, requesterId: number) {
@@ -56,7 +56,7 @@ export class ThreadService {
       eq(threadTable.id, threadId),
     );
 
-    return Result.ok('Fetched thread successfully', thread);
+    return Result.ok('Fetched thread successfully.', thread);
   }
 
   async create(dto: CreateThreadDto, requesterId: number) {
@@ -67,7 +67,7 @@ export class ThreadService {
         title: dto.title,
       })
       .$returningId();
-    return Result.ok('Thread created successfully', threadId);
+    return Result.ok('Created thread successfully.', threadId);
   }
 
   async addPost(threadId: number, ownerId: number, dto: CreatePostDto) {
@@ -101,7 +101,7 @@ export class ThreadService {
         }),
       );
     }
-    return Result.ok('Post added the thread successfully', null);
+    return Result.ok('Added post to thread successfully.', null);
   }
 
   async update(threadId: number, dto: UpdateThreadDto) {
@@ -109,7 +109,7 @@ export class ThreadService {
       .update(threadTable)
       .set({ title: dto.title })
       .where(eq(threadTable.id, threadId));
-    return Result.ok('Updated thread successfully', null);
+    return Result.ok('Updated thread successfully.', null);
   }
 
   async remove(threadId: number) {
@@ -120,7 +120,7 @@ export class ThreadService {
 
     await this.postService.removeMultiplePosts(posts.map((p) => p.id));
     await this.db.delete(threadTable).where(eq(threadTable.id, threadId));
-    return Result.ok('Deleted thread successfully', null);
+    return Result.ok('Deleted thread successfully.', null);
   }
 
   private getThreadQuery(requesterId: number) {

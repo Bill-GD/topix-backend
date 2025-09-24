@@ -45,13 +45,13 @@ export class AuthController {
   @UseGuards(AccountInfoGuard(false, ['username', 'email']))
   async register(@Body() dto: RegisterDto) {
     if (dto.password !== dto.confirmPassword) {
-      throw new BadRequestException('Password does not match.');
+      throw new BadRequestException('Provided passwords do not match.');
     }
 
     const newId = await this.authService.register(dto);
 
     return ControllerResponse.ok(
-      'User registered successfully',
+      'Registered successfully.',
       { id: newId },
       HttpStatus.CREATED,
     );
@@ -80,7 +80,7 @@ export class AuthController {
     await this.authService.sendOTP(userId);
 
     return ControllerResponse.ok(
-      'Resent OTP successfully',
+      'Resent OTP successfully.',
       null,
       HttpStatus.OK,
     );

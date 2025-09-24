@@ -9,6 +9,7 @@ import {
   profileTable,
   reactionTable,
   tagTable,
+  threadTable,
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
@@ -51,7 +52,7 @@ export class PostService {
         }),
       );
     }
-    return Result.ok('Post uploaded successfully', postId);
+    return Result.ok('Uploaded post successfully.', postId);
   }
 
   async getAll(postQuery: PostQuery, requesterId: number) {
@@ -99,7 +100,7 @@ export class PostService {
     }
 
     return Result.ok(
-      'Fetched posts successfully',
+      'Fetched posts successfully.',
       posts.map((p) => ({
         id: p.id,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -120,7 +121,7 @@ export class PostService {
   async getOne(postId: number, requesterId: number) {
     const currentPost = await this.getSinglePost(postId, requesterId);
     if (!currentPost.parentPostId) {
-      return Result.ok('Post fetched successfully', currentPost);
+      return Result.ok('Fetched post successfully.', currentPost);
     }
 
     const parentPost = await this.getSinglePost(
@@ -174,7 +175,7 @@ export class PostService {
           ),
         );
     }
-    return Result.ok('Updated post reaction successfully', null);
+    return Result.ok('Updated post reaction successfully.', null);
   }
 
   async removeReaction(postId: number, userId: number) {
@@ -187,7 +188,7 @@ export class PostService {
       .update(postStatsTable)
       .set({ reactionCount: sql`${postStatsTable.reactionCount} - 1` })
       .where(eq(postStatsTable.postId, postId));
-    return Result.ok('Updated post reaction successfully', null);
+    return Result.ok('Updated post reaction successfully.', null);
   }
 
   async reply(postId: number, ownerId: number, dto: CreatePostDto) {
@@ -221,18 +222,19 @@ export class PostService {
         }),
       );
     }
-    return Result.ok('Posted reply successfully', null);
+    return Result.ok('Posted reply successfully.', null);
   }
 
   async remove(postId: number) {
     await this.removeMultiplePosts([postId]);
-    return Result.ok('Post deleted successfully', null);
+    return Result.ok('Deleted post successfully.', null);
   }
 
   async removeMultiplePosts(postIds: number[]) {
     const posts = await this.db
       .select({
         parentPostId: postTable.parentPostId,
+        threadId: postTable.threadId,
         media: {
           id: mediaTable.id,
           type: mediaTable.type,
@@ -244,16 +246,19 @@ export class PostService {
 
     for (const p of posts) {
       if (p.media) {
-        void this.fileService.removeSingle(p.media.id, p.media.type);
+        this.fileService.removeSingle(p.media.id, p.media.type);
       }
-    }
-
-    for (const p of posts) {
       if (p.parentPostId) {
         await this.db
           .update(postStatsTable)
           .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
           .where(eq(postStatsTable.postId, p.parentPostId));
+      }
+      if (p.threadId) {
+        await this.db
+          .update(threadTable)
+          .set({ postCount: sql`${threadTable.postCount} - 1` })
+          .where(eq(threadTable.id, p.threadId));
       }
     }
 
