@@ -1,3 +1,4 @@
+import { CommonQuery } from '@/common/queries/common.query';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
@@ -9,6 +10,23 @@ import { eq } from 'drizzle-orm';
 @Injectable()
 export class UserService {
   constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
+
+  async getUsers(query: CommonQuery) {
+    const users = await this.db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        displayName: profileTable.displayName,
+        profilePicture: profileTable.profilePicture,
+        role: userTable.role,
+      })
+      .from(userTable)
+      .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
+      .limit(query.limit)
+      .offset(query.offset);
+
+    return Result.ok('Fetched users successfully.', users);
+  }
 
   async getUserById(id: number) {
     const [user] = await this.db

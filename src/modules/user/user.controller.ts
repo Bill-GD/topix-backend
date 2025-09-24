@@ -3,8 +3,10 @@ import {
   AccountOwnerGuard,
   AuthenticatedGuard,
   GetRequesterGuard,
+  IsAdminGuard,
   UserExistGuard,
 } from '@/common/guards';
+import { CommonQuery } from '@/common/queries/common.query';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { UserService } from '@/modules/user/user.service';
@@ -18,6 +20,7 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -26,6 +29,13 @@ import {
 @ApiController()
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Get()
+  @UseGuards(AuthenticatedGuard, GetRequesterGuard, IsAdminGuard)
+  async getAll(@Query() query: CommonQuery) {
+    const res = await this.userService.getUsers(query);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
 
   @Get('me')
   @UseGuards(GetRequesterGuard)
