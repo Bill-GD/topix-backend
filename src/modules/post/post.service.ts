@@ -14,7 +14,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, or, SQL, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
@@ -55,24 +55,31 @@ export class PostService {
   }
 
   async getAll(postQuery: PostQuery, requesterId: number) {
-    let query = this.getPostQuery(requesterId);
+    const query = this.getPostQuery(requesterId);
+    const andQueries: SQL[] = [];
+
     if (postQuery.username) {
-      query = query.where(eq(userTable.username, postQuery.username));
+      andQueries.push(eq(userTable.username, postQuery.username));
     }
     if (postQuery.tag) {
-      query = query.where(eq(tagTable.name, postQuery.tag));
+      andQueries.push(eq(tagTable.name, postQuery.tag));
     }
     if (postQuery.parentId) {
-      query = query.where(eq(postTable.parentPostId, postQuery.parentId));
+      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
     }
     if (postQuery.groupId) {
-      query = query.where(eq(postTable.groupId, postQuery.groupId));
+      andQueries.push(eq(postTable.groupId, postQuery.groupId));
+    } else {
+      andQueries.push(isNull(postTable.groupId));
     }
     if (postQuery.threadId) {
-      query = query.where(eq(postTable.threadId, postQuery.threadId));
+      andQueries.push(eq(postTable.threadId, postQuery.threadId));
+    } else {
+      andQueries.push(isNull(postTable.threadId));
     }
 
     const posts = await query
+      .where(and(...andQueries))
       .orderBy(desc(postTable.dateCreated))
       .offset(postQuery.offset)
       .limit(postQuery.limit);

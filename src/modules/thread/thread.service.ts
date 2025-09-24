@@ -17,7 +17,7 @@ import { PostService } from '@/modules/post/post.service';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, or, SQL, sql } from 'drizzle-orm';
 
 @Injectable()
 export class ThreadService {
@@ -27,18 +27,23 @@ export class ThreadService {
   ) {}
 
   async getAll(threadQuery: ThreadQuery, requesterId: number) {
-    let query = this.getThreadQuery(requesterId);
+    const query = this.getThreadQuery(requesterId);
+    const andQueries: SQL[] = [];
+
     if (threadQuery.username) {
-      query = query.where(eq(userTable.username, threadQuery.username));
+      andQueries.push(eq(userTable.username, threadQuery.username));
     }
     if (threadQuery.tag) {
-      query = query.where(eq(tagTable.name, threadQuery.tag));
+      andQueries.push(eq(tagTable.name, threadQuery.tag));
     }
     if (threadQuery.groupId) {
-      query = query.where(eq(threadTable.groupId, threadQuery.groupId));
+      andQueries.push(eq(threadTable.groupId, threadQuery.groupId));
+    } else {
+      andQueries.push(isNull(threadTable.groupId));
     }
 
     const threads = await query
+      .where(and(...andQueries))
       .orderBy(desc(threadTable.dateUpdated))
       .limit(threadQuery.limit)
       .offset(threadQuery.offset);
