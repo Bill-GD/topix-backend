@@ -243,10 +243,14 @@ export class PostService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(inArray(postTable.id, postIds));
 
+    // separated to start async deletion first (3rd party)
     for (const p of posts) {
       if (p.media) {
         this.fileService.removeSingle(p.media.id, p.media.type);
       }
+    }
+
+    for (const p of posts) {
       if (p.parentPostId) {
         await this.db
           .update(postStatsTable)
