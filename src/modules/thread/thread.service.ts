@@ -17,7 +17,7 @@ import { PostService } from '@/modules/post/post.service';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, or, SQL, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm';
 
 @Injectable()
 export class ThreadService {
@@ -27,7 +27,6 @@ export class ThreadService {
   ) {}
 
   async getAll(threadQuery: ThreadQuery, requesterId: number) {
-    const query = this.getThreadQuery(requesterId);
     const andQueries: SQL[] = [];
 
     if (threadQuery.username) {
@@ -42,11 +41,13 @@ export class ThreadService {
       andQueries.push(isNull(threadTable.groupId));
     }
 
-    const threads = await query
+    const query = this.getThreadQuery(requesterId)
       .where(and(...andQueries))
       .orderBy(desc(threadTable.dateUpdated))
       .limit(threadQuery.limit)
       .offset(threadQuery.offset);
+
+    const threads = await query;
 
     return Result.ok('Fetched threads successfully.', threads);
   }
@@ -136,6 +137,8 @@ export class ThreadService {
         postCount: threadTable.postCount,
         groupId: threadTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
+        // if(`thread_follow`.user_id = 7, true, false) `following`,
+        following: sql`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
       })
@@ -147,12 +150,6 @@ export class ThreadService {
         eq(threadFollowTable.threadId, threadTable.id),
       )
       .leftJoin(tagTable, eq(threadTable.tagId, tagTable.id))
-      .where(
-        or(
-          eq(threadFollowTable.userId, requesterId),
-          isNull(threadFollowTable.userId),
-        ),
-      )
       .$dynamic();
   }
 }

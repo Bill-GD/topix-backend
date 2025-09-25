@@ -15,7 +15,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, or, SQL, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
@@ -56,7 +56,6 @@ export class PostService {
   }
 
   async getAll(postQuery: PostQuery, requesterId: number) {
-    const query = this.getPostQuery(requesterId);
     const andQueries: SQL[] = [];
 
     if (postQuery.username) {
@@ -79,7 +78,7 @@ export class PostService {
       andQueries.push(isNull(postTable.threadId));
     }
 
-    const posts = await query
+    const posts = await this.getPostQuery(requesterId)
       .where(and(...andQueries))
       .orderBy(desc(postTable.dateCreated))
       .offset(postQuery.offset)
@@ -313,7 +312,7 @@ export class PostService {
           profilePicture: profileTable.profilePicture,
         },
         content: postTable.content,
-        reaction: reactionTable.type,
+        reaction: sql`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
         reactionCount: postStatsTable.reactionCount,
         replyCount: postStatsTable.replyCount,
         media: sql`(group_concat(${mediaTable.path} separator ';'))`,
@@ -332,11 +331,9 @@ export class PostService {
       .leftJoin(reactionTable, eq(reactionTable.postId, postTable.id))
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .leftJoin(tagTable, eq(postTable.tagId, tagTable.id))
-      .where(
-        or(eq(reactionTable.userId, requesterId), isNull(reactionTable.userId)),
-      )
       .groupBy(
         postTable.id,
+        reactionTable.userId,
         reactionTable.type,
         postStatsTable.reactionCount,
         postStatsTable.replyCount,
