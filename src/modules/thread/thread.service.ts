@@ -117,7 +117,7 @@ export class ThreadService {
         groupId: threadTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
         // if(`thread_follow`.user_id = 7, true, false) `following`,
-        following: sql`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
+        following: sql<boolean>`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
       })

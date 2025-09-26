@@ -122,8 +122,8 @@ export class GroupService {
           profilePicture: profileTable.profilePicture,
         },
         memberCount: groupTable.memberCount,
-        joined: sql`(if(${groupMemberTable.userId} = ${requesterId}, true, false))`,
-        dateJoined: sql`(if(${groupMemberTable.userId} = ${requesterId}, ${groupMemberTable.dateJoined}, null))`,
+        joined: sql<boolean>`(if(${groupMemberTable.userId} = ${requesterId}, true, false))`,
+        dateJoined: sql<Date | null>`(if(${groupMemberTable.userId} = ${requesterId}, ${groupMemberTable.dateJoined}, null))`,
         dateCreated: groupTable.dateCreated,
         dateUpdated: groupTable.dateUpdated,
       })

@@ -1,7 +1,7 @@
 import { PostQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
-import { DBType } from '@/common/utils/types';
+import { DBType, Reactions } from '@/common/utils/types';
 import {
   mediaTable,
   postStatsTable,
@@ -326,10 +326,12 @@ export class PostService {
           profilePicture: profileTable.profilePicture,
         },
         content: postTable.content,
-        reaction: sql`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
+        reaction: sql<
+          keyof typeof Reactions | null
+        >`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
         reactionCount: postStatsTable.reactionCount,
         replyCount: postStatsTable.replyCount,
-        media: sql`(group_concat(${mediaTable.path} separator ';'))`,
+        media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
         groupId: postTable.groupId,

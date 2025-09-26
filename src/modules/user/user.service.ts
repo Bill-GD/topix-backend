@@ -1,12 +1,17 @@
-import { CommonQuery } from '@/common/queries/common.query';
+import { UserQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
-import { postTable, profileTable, userTable } from '@/database/schemas';
+import {
+  groupMemberTable,
+  postTable,
+  profileTable,
+  userTable,
+} from '@/database/schemas';
 import { PostService } from '@/modules/post/post.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, SQL } from 'drizzle-orm';
 
 @Injectable()
 export class UserService {
@@ -15,7 +20,16 @@ export class UserService {
     private readonly postService: PostService,
   ) {}
 
-  async getUsers(query: CommonQuery) {
+  async getUsers(userQuery: UserQuery) {
+    const andQueries: SQL[] = [];
+
+    if (userQuery.groupId) {
+      andQueries.push(eq(groupMemberTable.groupId, userQuery.groupId));
+      if (userQuery.accepted) {
+        andQueries.push(eq(groupMemberTable.accepted, userQuery.accepted));
+      }
+    }
+
     const users = await this.db
       .select({
         id: userTable.id,
@@ -26,8 +40,10 @@ export class UserService {
       })
       .from(userTable)
       .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
-      .limit(query.limit)
-      .offset(query.offset);
+      .innerJoin(groupMemberTable, eq(userTable.id, groupMemberTable.userId))
+      .where(and(...andQueries))
+      .limit(userQuery.limit)
+      .offset(userQuery.offset);
 
     return Result.ok('Fetched users successfully.', users);
   }
