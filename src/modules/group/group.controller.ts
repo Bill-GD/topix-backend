@@ -3,6 +3,7 @@ import {
   AuthenticatedGuard,
   GetRequesterGuard,
   GroupExistGuard,
+  GroupOwnerGuard,
 } from '@/common/guards';
 import { GroupQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
@@ -27,15 +28,14 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupService } from './group.service';
 
 @Controller('group')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedGuard, GetRequesterGuard)
 @ApiController()
 export class GroupController {
   constructor(private readonly groupService: GroupService) {}
 
   @Post()
-  @UseGuards(GetRequesterGuard)
   @ApiFile('banner', CreateGroupDto, 'single')
-  async createThread(
+  async createGroup(
     @RequesterID() requesterId: number,
     @UploadedFile(
       new ParseFilePipe({
@@ -57,14 +57,13 @@ export class GroupController {
   }
 
   @Get()
-  @UseGuards(GetRequesterGuard)
   async getAll(@Query() query: GroupQuery, @RequesterID() requesterId: number) {
     const res = await this.groupService.getAll(query, requesterId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Get(':id')
-  @UseGuards(GroupExistGuard, GetRequesterGuard)
+  @UseGuards(GroupExistGuard)
   async getOne(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -74,12 +73,32 @@ export class GroupController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateGroupDto) {
-    return this.groupService.update(+id, dto);
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  async update(
+    @Param('id', ParseIntPipe) groupId: number,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: 'image/*',
+            fallbackToMimetype: true,
+          }),
+        ],
+        fileIsRequired: false,
+      }),
+    )
+    banner: Express.Multer.File,
+    @Body() dto: UpdateGroupDto,
+  ) {
+    if (banner) dto.bannerFile = banner;
+    const res = await this.groupService.update(groupId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.groupService.remove(+id);
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  async remove(@Param('id', ParseIntPipe) groupId: number) {
+    const res = await this.groupService.remove(groupId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 }

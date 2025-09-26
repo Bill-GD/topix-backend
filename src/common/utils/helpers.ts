@@ -8,8 +8,8 @@ export function getDistPath(): string {
   return dir;
 }
 
-export function getUploadsPath(filename: string): string {
-  return `${getDistPath()}/public/uploads/${filename}`;
+export function getCloudinaryIdFromUrl(url: string): string {
+  return url.split('/').pop()!.split('.')[0];
 }
 
 export function getReadableSize(byte: number): string {

@@ -1,6 +1,6 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { DBType } from '@/common/utils/types';
-import { postTable, threadTable } from '@/database/schemas';
+import { groupTable, postTable, threadTable } from '@/database/schemas';
 import {
   CanActivate,
   ExecutionContext,
@@ -78,4 +78,9 @@ export const ThreadOwnerGuard = ResourceOwnerGuard(
   threadTable,
   threadTable.ownerId,
   threadTable.id,
+);
+export const GroupOwnerGuard = ResourceOwnerGuard(
+  groupTable,
+  groupTable.ownerId,
+  groupTable.id,
 );

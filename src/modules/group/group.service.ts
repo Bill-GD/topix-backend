@@ -1,5 +1,6 @@
 import { GroupQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
+import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
@@ -11,7 +12,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, sql, SQL } from 'drizzle-orm';
+import { and, eq, sql, SQL } from 'drizzle-orm';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 
@@ -67,12 +68,33 @@ export class GroupService {
     return Result.ok('Fetched group successfully.', group);
   }
 
-  update(groupId: number, dto: UpdateGroupDto) {
-    return `This action updates a #${groupId} group`;
+  async update(groupId: number, dto: UpdateGroupDto) {
+    let bannerUrl: string | undefined;
+    if (dto.bannerFile) {
+      const [{ bannerPicture: oldBannerUrl }] = await this.db
+        .select({ bannerPicture: groupTable.bannerPicture })
+        .from(groupTable)
+        .where(eq(groupTable.id, groupId));
+      if (oldBannerUrl) {
+        const publicId = getCloudinaryIdFromUrl(oldBannerUrl);
+        this.fileService.removeSingle(publicId, 'image');
+      }
+      bannerUrl = (await this.fileService.uploadSingle(dto.bannerFile)).data;
+    }
+
+    await this.db
+      .update(groupTable)
+      .set({
+        name: dto.name,
+        bannerPicture: bannerUrl,
+        description: dto.description,
+      })
+      .where(eq(groupTable.id, groupId));
+    return Result.ok('Updated group successfully.', null);
   }
 
-  remove(groupId: number) {
-    return `This action removes a #${groupId} group`;
+  async remove(groupId: number) {
+    return Result.ok('Deleted group successfully.', null);
   }
 
   private getGroupQuery(requesterId: number) {
