@@ -22,7 +22,7 @@ export class FileController {
   constructor(private readonly fileService: FileService) {}
 
   @Post('upload')
-  @ApiFile('files', UploadFileDto)
+  @ApiFile('files', UploadFileDto, 'list')
   async uploadFiles(
     @UploadedFiles(
       new ParseFilePipe({
