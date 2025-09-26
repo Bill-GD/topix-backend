@@ -10,7 +10,7 @@ import { JsonWebTokenError, JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
 @Injectable()
-export class AuthenticatedGuard implements CanActivate {
+export class RefreshTokenGuard implements CanActivate {
   constructor(private readonly jwt: JwtService) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -26,7 +26,7 @@ export class AuthenticatedGuard implements CanActivate {
     const authToken = req.headers.authorization.split(' ')[1];
     try {
       const token = this.jwt.verify<JwtUserPayload>(authToken);
-      if (token.type !== 'access') {
+      if (token.type !== 'refresh') {
         throw new JsonWebTokenError('Invalid token provided.');
       }
     } catch (err) {
