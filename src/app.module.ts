@@ -4,6 +4,7 @@ import { CloudinaryModule } from '@/modules/cloudinary.module';
 import { CryptoModule } from '@/modules/crypto/crypto.module';
 import { DatabaseModule } from '@/modules/database.module';
 import { FileModule } from '@/modules/file/file.module';
+import { GroupModule } from '@/modules/group/group.module';
 import { MailerModule } from '@/modules/mailer/mailer.module';
 import { PostModule } from '@/modules/post/post.module';
 import { ThreadModule } from '@/modules/thread/thread.module';
@@ -29,6 +30,7 @@ import * as process from 'node:process';
     FileModule,
     PostModule,
     ThreadModule,
+    GroupModule,
   ],
   providers: [],
 })
