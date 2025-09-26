@@ -6,6 +6,8 @@ import { DBType } from '@/common/utils/types';
 import {
   groupMemberTable,
   groupTable,
+  mediaTable,
+  postTable,
   profileTable,
   userTable,
 } from '@/database/schemas';
@@ -108,6 +110,34 @@ export class GroupService {
   }
 
   async remove(groupId: number) {
+    const [{ bannerPicture }] = await this.db
+      .select({ bannerPicture: groupTable.bannerPicture })
+      .from(groupTable)
+      .where(eq(groupTable.id, groupId));
+    if (bannerPicture) {
+      this.fileService.removeSingle(
+        getCloudinaryIdFromUrl(bannerPicture),
+        'image',
+      );
+    }
+
+    const posts = await this.db
+      .select({
+        media: {
+          id: mediaTable.id,
+          type: mediaTable.type,
+        },
+      })
+      .from(postTable)
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
+      .where(eq(postTable.groupId, groupId));
+
+    for (const p of posts) {
+      if (p.media) {
+        this.fileService.removeSingle(p.media.id, p.media.type);
+      }
+    }
+
     return Result.ok('Deleted group successfully.', null);
   }
 

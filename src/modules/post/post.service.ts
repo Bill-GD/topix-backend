@@ -260,20 +260,51 @@ export class PostService {
       }
     }
 
-    for (const p of posts) {
-      if (p.parentPostId) {
-        await this.db
-          .update(postStatsTable)
-          .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-          .where(eq(postStatsTable.postId, p.parentPostId));
+    const parentPostReplyCount = posts.reduce((p, c) => {
+      if (c.parentPostId === null) return p;
+      if (p.has(c.parentPostId)) {
+        p.set(c.parentPostId, p.get(c.parentPostId)! + 1);
+      } else {
+        p.set(c.parentPostId, 1);
       }
-      if (p.threadId) {
-        await this.db
-          .update(threadTable)
-          .set({ postCount: sql`${threadTable.postCount} - 1` })
-          .where(eq(threadTable.id, p.threadId));
+      return p;
+    }, new Map<number, number>());
+    await this.db
+      .update(postStatsTable)
+      .set({
+        replyCount: sql`${postStatsTable.replyCount} - case ${sql.raw(
+          Array.from(parentPostReplyCount)
+            .map(([k, v]) => {
+              return `when ${postStatsTable.postId.name} = ${k} then ${v}`;
+            })
+            .join(' '),
+        )} end`,
+      })
+      .where(
+        inArray(postStatsTable.postId, Array.from(parentPostReplyCount.keys())),
+      );
+
+    const threadPostCount = posts.reduce((p, c) => {
+      if (c.threadId === null) return p;
+      if (p.has(c.threadId)) {
+        p.set(c.threadId, p.get(c.threadId)! + 1);
+      } else {
+        p.set(c.threadId, 1);
       }
-    }
+      return p;
+    }, new Map<number, number>());
+    await this.db
+      .update(threadTable)
+      .set({
+        postCount: sql`${threadTable.postCount} - case ${sql.raw(
+          Array.from(threadPostCount)
+            .map(([k, v]) => {
+              return `when ${threadTable.id.name} = ${k} then ${v}`;
+            })
+            .join(' '),
+        )} end`,
+      })
+      .where(inArray(threadTable.id, Array.from(threadPostCount.keys())));
 
     await this.db.delete(postTable).where(inArray(postTable.id, postIds));
   }

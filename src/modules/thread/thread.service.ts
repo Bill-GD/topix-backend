@@ -3,6 +3,7 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  mediaTable,
   postTable,
   profileTable,
   tagTable,
@@ -10,6 +11,7 @@ import {
   threadTable,
   userTable,
 } from '@/database/schemas';
+import { FileService } from '@/modules/file/file.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
@@ -22,6 +24,7 @@ export class ThreadService {
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
     private readonly postService: PostService,
+    private readonly fileService: FileService,
   ) {}
 
   async getAll(threadQuery: ThreadQuery, requesterId: number) {
@@ -94,11 +97,21 @@ export class ThreadService {
 
   async remove(threadId: number) {
     const posts = await this.db
-      .select({ id: postTable.id })
+      .select({
+        media: {
+          id: mediaTable.id,
+          type: mediaTable.type,
+        },
+      })
       .from(postTable)
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.threadId, threadId));
 
-    await this.postService.removeMultiplePosts(posts.map((p) => p.id));
+    for (const p of posts) {
+      if (p.media) {
+        this.fileService.removeSingle(p.media.id, p.media.type);
+      }
+    }
     await this.db.delete(threadTable).where(eq(threadTable.id, threadId));
     return Result.ok('Deleted thread successfully.', null);
   }
