@@ -10,6 +10,9 @@ import {
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
+import { PostService } from '@/modules/post/post.service';
+import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, sql, SQL } from 'drizzle-orm';
@@ -21,6 +24,7 @@ export class GroupService {
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
     private readonly threadService: ThreadService,
+    private readonly postService: PostService,
     private readonly fileService: FileService,
   ) {}
 
@@ -68,6 +72,16 @@ export class GroupService {
     return Result.ok('Fetched group successfully.', group);
   }
 
+  async addPost(groupId: number, ownerId: number, dto: CreatePostDto) {
+    await this.postService.create(ownerId, dto, undefined, groupId);
+    return Result.ok('Added post to group successfully.', null);
+  }
+
+  async addThread(groupId: number, ownerId: number, dto: CreateThreadDto) {
+    await this.threadService.create(dto, ownerId, groupId);
+    return Result.ok('Added thread to group successfully.', null);
+  }
+
   async update(groupId: number, dto: UpdateGroupDto) {
     let bannerUrl: string | undefined;
     if (dto.bannerFile) {
@@ -108,7 +122,6 @@ export class GroupService {
           profilePicture: profileTable.profilePicture,
         },
         memberCount: groupTable.memberCount,
-        // if(`thread_follow`.user_id = 7, true, false) `following`,
         joined: sql`(if(${groupMemberTable.userId} = ${requesterId}, true, false))`,
         dateJoined: sql`(if(${groupMemberTable.userId} = ${requesterId}, ${groupMemberTable.dateJoined}, null))`,
         dateCreated: groupTable.dateCreated,

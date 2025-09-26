@@ -7,6 +7,8 @@ import {
 } from '@/common/guards';
 import { GroupQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
+import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import {
   Body,
   Controller,
@@ -70,6 +72,28 @@ export class GroupController {
   ) {
     const res = await this.groupService.getOne(groupId, requesterId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Post(':id/post')
+  @UseGuards(GroupExistGuard, GetRequesterGuard, GroupOwnerGuard)
+  async addPost(
+    @Param('id', ParseIntPipe) groupId: number,
+    @RequesterID() requesterId: number,
+    @Body() dto: CreatePostDto,
+  ) {
+    const res = await this.groupService.addPost(groupId, requesterId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
+  }
+
+  @Post(':id/thread')
+  @UseGuards(GroupExistGuard, GetRequesterGuard, GroupOwnerGuard)
+  async addThread(
+    @Param('id', ParseIntPipe) groupId: number,
+    @RequesterID() requesterId: number,
+    @Body() dto: CreateThreadDto,
+  ) {
+    const res = await this.groupService.addThread(groupId, requesterId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
   @Patch(':id')

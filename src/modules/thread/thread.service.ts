@@ -3,8 +3,6 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
-  mediaTable,
-  postStatsTable,
   postTable,
   profileTable,
   tagTable,
@@ -58,48 +56,31 @@ export class ThreadService {
     return Result.ok('Fetched thread successfully.', thread);
   }
 
-  async create(dto: CreateThreadDto, requesterId: number) {
+  async create(dto: CreateThreadDto, requesterId: number, groupId?: number) {
     const [{ id: threadId }] = await this.db
       .insert(threadTable)
       .values({
         ownerId: requesterId,
         title: dto.title,
+        groupId: groupId,
       })
       .$returningId();
     return Result.ok('Created thread successfully.', threadId);
   }
 
   async addPost(threadId: number, ownerId: number, dto: CreatePostDto) {
-    const [{ id: postId }] = await this.db
-      .insert(postTable)
-      .values({
-        ownerId: ownerId,
-        threadId: threadId,
-        content: dto.content,
-      })
-      .$returningId();
-
-    await this.db.insert(postStatsTable).values({ postId });
-    await this.db
-      .update(threadTable)
-      .set({ postCount: sql`${threadTable.postCount} + 1` })
-      .where(eq(threadTable.id, threadId));
-
-    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
-      await this.db.insert(mediaTable).values(
-        dto.mediaPaths.map((m) => {
-          const segments = m.split('/');
-          const publicId = segments[segments.length - 1].split('.')[0];
-
-          return {
-            id: publicId,
-            postId,
-            type: dto.type,
-            path: m,
-          };
-        }),
-      );
-    }
+    await this.postService.create(
+      ownerId,
+      dto,
+      threadId,
+      undefined,
+      async () => {
+        await this.db
+          .update(threadTable)
+          .set({ postCount: sql`${threadTable.postCount} + 1` })
+          .where(eq(threadTable.id, threadId));
+      },
+    );
     return Result.ok('Added post to thread successfully.', null);
   }
 

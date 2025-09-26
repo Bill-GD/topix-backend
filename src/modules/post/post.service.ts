@@ -26,16 +26,26 @@ export class PostService {
     private readonly fileService: FileService,
   ) {}
 
-  async create(ownerId: number, dto: CreatePostDto) {
+  async create(
+    ownerId: number,
+    dto: CreatePostDto,
+    threadId?: number,
+    groupId?: number,
+    additional?: () => Promise<void>,
+  ) {
     const [{ id: postId }] = await this.db
       .insert(postTable)
       .values({
         ownerId: ownerId,
         content: dto.content,
+        threadId: threadId,
+        groupId: groupId,
       })
       .$returningId();
 
     await this.db.insert(postStatsTable).values({ postId });
+
+    await additional?.();
 
     if (dto.mediaPaths && dto.mediaPaths.length > 0) {
       await this.db.insert(mediaTable).values(
