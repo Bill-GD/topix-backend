@@ -1,5 +1,10 @@
 import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import {
+  AuthenticatedGuard,
+  GetRequesterGuard,
+  GroupExistGuard,
+} from '@/common/guards';
+import { GroupQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
   Body,
@@ -10,8 +15,10 @@ import {
   HttpStatus,
   Param,
   ParseFilePipe,
+  ParseIntPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
 } from '@nestjs/common';
@@ -50,13 +57,20 @@ export class GroupController {
   }
 
   @Get()
-  findAll() {
-    return this.groupService.findAll();
+  @UseGuards(GetRequesterGuard)
+  async getAll(@Query() query: GroupQuery, @RequesterID() requesterId: number) {
+    const res = await this.groupService.getAll(query, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.groupService.findOne(+id);
+  @UseGuards(GroupExistGuard, GetRequesterGuard)
+  async getOne(
+    @Param('id', ParseIntPipe) groupId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.groupService.getOne(groupId, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Patch(':id')

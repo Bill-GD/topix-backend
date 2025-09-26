@@ -41,13 +41,11 @@ export class ThreadService {
       andQueries.push(isNull(threadTable.groupId));
     }
 
-    const query = this.getThreadQuery(requesterId)
+    const threads = await this.getThreadQuery(requesterId)
       .where(and(...andQueries))
       .orderBy(desc(threadTable.dateUpdated))
       .limit(threadQuery.limit)
       .offset(threadQuery.offset);
-
-    const threads = await query;
 
     return Result.ok('Fetched threads successfully.', threads);
   }
