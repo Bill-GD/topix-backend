@@ -235,12 +235,7 @@ export class PostService {
   }
 
   async remove(postId: number) {
-    await this.removeMultiplePosts([postId]);
-    return Result.ok('Deleted post successfully.', null);
-  }
-
-  async removeMultiplePosts(postIds: number[]) {
-    const posts = await this.db
+    const [post] = await this.db
       .select({
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
@@ -251,62 +246,24 @@ export class PostService {
       })
       .from(postTable)
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
-      .where(inArray(postTable.id, postIds));
+      .where(eq(postTable.id, postId));
 
-    // separated to start async deletion first (3rd party)
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
+    if (post.parentPostId) {
+      await this.db
+        .update(postStatsTable)
+        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
+        .where(eq(postStatsTable.postId, post.parentPostId));
     }
 
-    const parentPostReplyCount = posts.reduce((p, c) => {
-      if (c.parentPostId === null) return p;
-      if (p.has(c.parentPostId)) {
-        p.set(c.parentPostId, p.get(c.parentPostId)! + 1);
-      } else {
-        p.set(c.parentPostId, 1);
-      }
-      return p;
-    }, new Map<number, number>());
-    await this.db
-      .update(postStatsTable)
-      .set({
-        replyCount: sql`${postStatsTable.replyCount} - case ${sql.raw(
-          Array.from(parentPostReplyCount)
-            .map(([k, v]) => {
-              return `when ${postStatsTable.postId.name} = ${k} then ${v}`;
-            })
-            .join(' '),
-        )} end`,
-      })
-      .where(
-        inArray(postStatsTable.postId, Array.from(parentPostReplyCount.keys())),
-      );
+    if (post.threadId) {
+      await this.db
+        .update(threadTable)
+        .set({ postCount: sql`${threadTable.postCount} - 1` })
+        .where(eq(threadTable.id, post.threadId));
+    }
 
-    const threadPostCount = posts.reduce((p, c) => {
-      if (c.threadId === null) return p;
-      if (p.has(c.threadId)) {
-        p.set(c.threadId, p.get(c.threadId)! + 1);
-      } else {
-        p.set(c.threadId, 1);
-      }
-      return p;
-    }, new Map<number, number>());
-    await this.db
-      .update(threadTable)
-      .set({
-        postCount: sql`${threadTable.postCount} - case ${sql.raw(
-          Array.from(threadPostCount)
-            .map(([k, v]) => {
-              return `when ${threadTable.id.name} = ${k} then ${v}`;
-            })
-            .join(' '),
-        )} end`,
-      })
-      .where(inArray(threadTable.id, Array.from(threadPostCount.keys())));
-
-    await this.db.delete(postTable).where(inArray(postTable.id, postIds));
+    await this.db.delete(postTable).where(eq(postTable.id, postId));
+    return Result.ok('Deleted post successfully.', null);
   }
 
   private async getSinglePost(postId: number, requesterId: number) {

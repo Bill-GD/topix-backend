@@ -4,11 +4,12 @@ import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
   groupMemberTable,
+  mediaTable,
   postTable,
   profileTable,
   userTable,
 } from '@/database/schemas';
-import { PostService } from '@/modules/post/post.service';
+import { FileService } from '@/modules/file/file.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, SQL } from 'drizzle-orm';
@@ -17,7 +18,7 @@ import { and, eq, SQL } from 'drizzle-orm';
 export class UserService {
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
-    private readonly postService: PostService,
+    private readonly fileService: FileService,
   ) {}
 
   async getUsers(userQuery: UserQuery) {
@@ -124,11 +125,21 @@ export class UserService {
     }
 
     const posts = await this.db
-      .select({ id: postTable.id })
+      .select({
+        media: {
+          id: mediaTable.id,
+          type: mediaTable.type,
+        },
+      })
       .from(postTable)
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.ownerId, user.id));
 
-    await this.postService.removeMultiplePosts(posts.map((p) => p.id));
+    for (const p of posts) {
+      if (p.media) {
+        this.fileService.removeSingle(p.media.id, p.media.type);
+      }
+    }
 
     await this.db.delete(userTable).where(eq(userTable.id, user.id));
     return Result.ok('Deleted account successfully.', null);
