@@ -108,6 +108,39 @@ export class GroupService {
     return Result.ok('Changed group owner successfully.', null);
   }
 
+  async acceptMember(groupId: number, userId: number) {
+    await this.db
+      .update(groupMemberTable)
+      .set({ accepted: true })
+      .where(
+        and(
+          eq(groupMemberTable.groupId, groupId),
+          eq(groupMemberTable.userId, userId),
+        ),
+      );
+    return Result.ok('Approved member successfully.', null);
+  }
+
+  async removeMember(groupId: number, userId: number) {
+    await this.db
+      .delete(groupMemberTable)
+      .where(
+        and(
+          eq(groupMemberTable.groupId, groupId),
+          eq(groupMemberTable.userId, userId),
+        ),
+      );
+    return Result.ok('Removed group member successfully.', null);
+  }
+
+  async acceptPost(postId: number) {
+    await this.db
+      .update(postTable)
+      .set({ groupAccepted: true })
+      .where(eq(postTable.id, postId));
+    return Result.ok('Approved member successfully.', null);
+  }
+
   async update(groupId: number, dto: UpdateGroupDto) {
     let bannerUrl: string | undefined;
     if (dto.bannerFile) {

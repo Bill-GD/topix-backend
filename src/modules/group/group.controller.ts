@@ -118,6 +118,23 @@ export class GroupController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
+  @Post(':id/member/:userId')
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  async acceptMember(
+    @Param('id', ParseIntPipe) groupId: number,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    const res = await this.groupService.acceptMember(groupId, userId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Post(':id/post/:postId')
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  async acceptPost(@Param('postId', ParseIntPipe) postId: number) {
+    const res = await this.groupService.acceptPost(postId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   @Patch(':id')
   @UseGuards(GroupExistGuard, GroupOwnerGuard)
   async update(
@@ -146,6 +163,16 @@ export class GroupController {
   async removeTag(@Param('tagId', ParseIntPipe) tagId: number) {
     const res = await this.groupService.removeTag(tagId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Delete(':id/member/:userId')
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  async deleteMember(
+    @Param('id', ParseIntPipe) groupId: number,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    const res = await this.groupService.removeMember(groupId, userId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
   @Delete(':id')
