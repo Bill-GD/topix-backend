@@ -26,7 +26,7 @@ export class UserService {
 
     if (userQuery.groupId) {
       andQueries.push(eq(groupMemberTable.groupId, userQuery.groupId));
-      if (userQuery.accepted) {
+      if (userQuery.accepted !== undefined) {
         andQueries.push(eq(groupMemberTable.accepted, userQuery.accepted));
       }
     }

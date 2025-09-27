@@ -79,6 +79,9 @@ export class PostService {
     }
     if (postQuery.groupId) {
       andQueries.push(eq(postTable.groupId, postQuery.groupId));
+      if (postQuery.accepted !== undefined) {
+        andQueries.push(eq(postTable.groupAccepted, postQuery.accepted));
+      }
     } else {
       andQueries.push(isNull(postTable.groupId));
     }
@@ -235,7 +238,7 @@ export class PostService {
   }
 
   async remove(postId: number) {
-    const [post] = await this.db
+    const posts = await this.db
       .select({
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
@@ -248,18 +251,24 @@ export class PostService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.id, postId));
 
-    if (post.parentPostId) {
+    for (const p of posts) {
+      if (p.media) {
+        this.fileService.removeSingle(p.media.id, p.media.type);
+      }
+    }
+
+    if (posts[0].parentPostId) {
       await this.db
         .update(postStatsTable)
         .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-        .where(eq(postStatsTable.postId, post.parentPostId));
+        .where(eq(postStatsTable.postId, posts[0].parentPostId));
     }
 
-    if (post.threadId) {
+    if (posts[0].threadId) {
       await this.db
         .update(threadTable)
         .set({ postCount: sql`${threadTable.postCount} - 1` })
-        .where(eq(threadTable.id, post.threadId));
+        .where(eq(threadTable.id, posts[0].threadId));
     }
 
     await this.db.delete(postTable).where(eq(postTable.id, postId));

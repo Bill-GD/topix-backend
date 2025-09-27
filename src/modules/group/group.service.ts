@@ -9,9 +9,11 @@ import {
   mediaTable,
   postTable,
   profileTable,
+  tagTable,
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
+import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
@@ -82,6 +84,28 @@ export class GroupService {
   async addThread(groupId: number, ownerId: number, dto: CreateThreadDto) {
     await this.threadService.create(dto, ownerId, groupId);
     return Result.ok('Added thread to group successfully.', null);
+  }
+
+  async addTag(groupId: number, dto: CreateTagDto) {
+    await this.db.insert(tagTable).values({
+      groupId,
+      name: dto.name,
+      colorHex: dto.color,
+    });
+    return Result.ok('Added tag to group successfully.', null);
+  }
+
+  async removeTag(tagId: number) {
+    await this.db.delete(tagTable).where(eq(tagTable.id, tagId));
+    return Result.ok('Removed tag from group successfully.', null);
+  }
+
+  async changeOwner(groupId: number, newOwnerId: number) {
+    await this.db
+      .update(groupTable)
+      .set({ ownerId: newOwnerId })
+      .where(eq(groupTable.id, groupId));
+    return Result.ok('Changed group owner successfully.', null);
   }
 
   async update(groupId: number, dto: UpdateGroupDto) {

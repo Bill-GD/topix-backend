@@ -16,7 +16,9 @@ export class RegisterDto {
   username: string;
 
   @ApiProperty({ example: 'password123' })
-  @Length(8, 20)
+  @Length(8, 20, {
+    message: (args) => 'Password must be within 8 and 20 characters.',
+  })
   @IsNotEmptyString()
   password: string;
 

@@ -4,9 +4,11 @@ import {
   GetRequesterGuard,
   GroupExistGuard,
   GroupOwnerGuard,
+  TagExistGuard,
 } from '@/common/guards';
 import { GroupQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import {
@@ -75,7 +77,7 @@ export class GroupController {
   }
 
   @Post(':id/post')
-  @UseGuards(GroupExistGuard, GetRequesterGuard, GroupOwnerGuard)
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
   async addPost(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -86,13 +88,33 @@ export class GroupController {
   }
 
   @Post(':id/thread')
-  @UseGuards(GroupExistGuard, GetRequesterGuard, GroupOwnerGuard)
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
   async addThread(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
     @Body() dto: CreateThreadDto,
   ) {
     const res = await this.groupService.addThread(groupId, requesterId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
+  }
+
+  @Post(':id/tag')
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  async addTag(
+    @Param('id', ParseIntPipe) groupId: number,
+    @Body() dto: CreateTagDto,
+  ) {
+    const res = await this.groupService.addTag(groupId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
+  }
+
+  @Post(':id/change-owner')
+  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  async changeOwner(
+    @Param('id', ParseIntPipe) groupId: number,
+    @Body() dto: { newOwnerId: number },
+  ) {
+    const res = await this.groupService.changeOwner(groupId, dto.newOwnerId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
@@ -116,6 +138,13 @@ export class GroupController {
   ) {
     if (banner) dto.bannerFile = banner;
     const res = await this.groupService.update(groupId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Delete(':id/tag/:tagId')
+  @UseGuards(GroupExistGuard, GroupOwnerGuard, TagExistGuard)
+  async removeTag(@Param('tagId', ParseIntPipe) tagId: number) {
+    const res = await this.groupService.removeTag(tagId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
