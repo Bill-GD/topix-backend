@@ -74,6 +74,5 @@ export const postStatsTable = mysqlTable(Tables.postStats, {
   postId: int('post_id')
     .notNull()
     .references(() => postTable.id, { onDelete: 'cascade' }),
-  reactionCount: int('reaction_count').notNull().default(0),
   replyCount: int('reply_count').notNull().default(0),
 });

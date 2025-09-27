@@ -123,7 +123,7 @@ export class PostService {
         reaction: p.reaction,
         reactionCount: p.reactionCount,
         replyCount: p.replyCount,
-        mediaPaths: p.media ? (p.media as string).split(';') : [],
+        mediaPaths: p.media ? p.media.split(';') : [],
         dateCreated: p.dateCreated,
         dateUpdated: p.dateUpdated,
       })),
@@ -171,10 +171,6 @@ export class PostService {
         userId: userId,
         type: dto.reaction,
       });
-      await this.db
-        .update(postStatsTable)
-        .set({ reactionCount: sql`${postStatsTable.reactionCount} + 1` })
-        .where(eq(postStatsTable.postId, postId));
     }
     if (res >= 1) {
       await this.db
@@ -196,10 +192,6 @@ export class PostService {
       .where(
         and(eq(reactionTable.postId, postId), eq(reactionTable.userId, userId)),
       );
-    await this.db
-      .update(postStatsTable)
-      .set({ reactionCount: sql`${postStatsTable.reactionCount} - 1` })
-      .where(eq(postStatsTable.postId, postId));
     return Result.ok('Updated post reaction successfully.', null);
   }
 
@@ -288,7 +280,7 @@ export class PostService {
       reaction: res.reaction,
       reactionCount: res.reactionCount,
       replyCount: res.replyCount,
-      mediaPaths: res.media ? (res.media as string).split(';') : [],
+      mediaPaths: res.media ? res.media.split(';') : [],
       dateCreated: res.dateCreated,
       dateUpdated: res.dateUpdated,
     };
@@ -307,7 +299,7 @@ export class PostService {
       reaction: r.reaction,
       reactionCount: r.reactionCount,
       replyCount: r.replyCount,
-      mediaPaths: r.media ? (r.media as string).split(';') : [],
+      mediaPaths: r.media ? r.media.split(';') : [],
       dateCreated: r.dateCreated,
       dateUpdated: r.dateUpdated,
     }));
@@ -326,7 +318,7 @@ export class PostService {
         reaction: sql<
           keyof typeof Reactions | null
         >`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
-        reactionCount: postStatsTable.reactionCount,
+        reactionCount: sql<number>`(count(${reactionTable.userId}))`,
         replyCount: postStatsTable.replyCount,
         media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
@@ -348,7 +340,6 @@ export class PostService {
         postTable.id,
         reactionTable.userId,
         reactionTable.type,
-        postStatsTable.reactionCount,
         postStatsTable.replyCount,
         postTable.dateCreated,
       )

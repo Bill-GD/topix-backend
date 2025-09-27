@@ -7,7 +7,9 @@ import {
   TagExistGuard,
 } from '@/common/guards';
 import { GroupQuery } from '@/common/queries';
+import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { getReadableSize } from '@/common/utils/helpers';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
@@ -18,6 +20,7 @@ import {
   FileTypeValidator,
   Get,
   HttpStatus,
+  MaxFileSizeValidator,
   Param,
   ParseFilePipe,
   ParseIntPipe,
@@ -48,6 +51,10 @@ export class GroupController {
             fileType: 'image/*',
             fallbackToMimetype: true,
           }),
+          new MaxFileSizeValidator({
+            maxSize: ImageSizeLimit,
+            message: `Image size must be within ${getReadableSize(ImageSizeLimit)}.`,
+          }),
         ],
         fileIsRequired: false,
       }),
@@ -76,8 +83,18 @@ export class GroupController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
+  @Post(':id/join')
+  @UseGuards(GroupExistGuard)
+  async joinGroup(
+    @Param('id', ParseIntPipe) groupId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.groupService.joinGroup(groupId, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   @Post(':id/post')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(GroupExistGuard)
   async addPost(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -88,7 +105,7 @@ export class GroupController {
   }
 
   @Post(':id/thread')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(GroupExistGuard)
   async addThread(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -156,6 +173,20 @@ export class GroupController {
     if (banner) dto.bannerFile = banner;
     const res = await this.groupService.update(groupId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Delete(':id/member')
+  @UseGuards(GroupExistGuard)
+  async leaveGroup(
+    @Param('id', ParseIntPipe) groupId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.groupService.removeMember(groupId, requesterId);
+    return ControllerResponse.ok(
+      'Left group successfully.',
+      res.data,
+      HttpStatus.OK,
+    );
   }
 
   @Delete(':id/tag/:tagId')

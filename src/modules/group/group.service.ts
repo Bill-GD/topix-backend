@@ -47,6 +47,12 @@ export class GroupService {
         bannerPicture: bannerUrl,
       })
       .$returningId();
+
+    await this.db.insert(groupMemberTable).values({
+      groupId,
+      userId: requesterId,
+      accepted: true,
+    });
     return Result.ok('Created group successfully.', groupId);
   }
 
@@ -166,6 +172,14 @@ export class GroupService {
     return Result.ok('Updated group successfully.', null);
   }
 
+  async joinGroup(groupId: number, userId: number) {
+    await this.db.insert(groupMemberTable).values({
+      groupId,
+      userId,
+    });
+    return Result.ok('Sent join request successfully.', null);
+  }
+
   async remove(groupId: number) {
     const [{ bannerPicture }] = await this.db
       .select({ bannerPicture: groupTable.bannerPicture })
@@ -195,6 +209,7 @@ export class GroupService {
       }
     }
 
+    await this.db.delete(groupTable).where(eq(groupTable.id, groupId));
     return Result.ok('Deleted group successfully.', null);
   }
 
@@ -208,16 +223,26 @@ export class GroupService {
           displayName: profileTable.displayName,
           profilePicture: profileTable.profilePicture,
         },
+        bannerPicture: groupTable.bannerPicture,
+        visibility: groupTable.visibility,
         memberCount: groupTable.memberCount,
-        joined: sql<boolean>`(if(${groupMemberTable.userId} = ${requesterId}, true, false))`,
-        dateJoined: sql<Date | null>`(if(${groupMemberTable.userId} = ${requesterId}, ${groupMemberTable.dateJoined}, null))`,
+        status: sql<
+          'none' | 'pending' | 'joined'
+        >`(if(${groupMemberTable.accepted} is null, 'none', if(${groupMemberTable.accepted}, 'joined', 'pending')))`,
+        dateJoined: groupMemberTable.dateJoined,
         dateCreated: groupTable.dateCreated,
         dateUpdated: groupTable.dateUpdated,
       })
       .from(groupTable)
       .innerJoin(userTable, eq(userTable.id, groupTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-      .leftJoin(groupMemberTable, eq(groupMemberTable.groupId, groupTable.id))
+      .leftJoin(
+        groupMemberTable,
+        and(
+          eq(groupMemberTable.groupId, groupTable.id),
+          eq(groupMemberTable.userId, requesterId),
+        ),
+      )
       .$dynamic();
   }
 }
