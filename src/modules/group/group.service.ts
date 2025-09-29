@@ -13,10 +13,10 @@ import {
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
+import { CreateGroupPostDto } from '@/modules/group/dto/create-group-post.dto';
+import { CreateGroupThreadDto } from '@/modules/group/dto/create-group-thread.dto';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
-import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
-import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, sql, SQL } from 'drizzle-orm';
@@ -82,13 +82,13 @@ export class GroupService {
     return Result.ok('Fetched group successfully.', group);
   }
 
-  async addPost(groupId: number, ownerId: number, dto: CreatePostDto) {
-    await this.postService.create(ownerId, dto, undefined, groupId);
+  async addPost(groupId: number, ownerId: number, dto: CreateGroupPostDto) {
+    await this.postService.create(ownerId, dto, undefined, groupId, dto.tagId);
     return Result.ok('Added post to group successfully.', null);
   }
 
-  async addThread(groupId: number, ownerId: number, dto: CreateThreadDto) {
-    await this.threadService.create(dto, ownerId, groupId);
+  async addThread(groupId: number, ownerId: number, dto: CreateGroupThreadDto) {
+    await this.threadService.create(dto, ownerId, groupId, dto.tagId);
     return Result.ok('Added thread to group successfully.', null);
   }
 

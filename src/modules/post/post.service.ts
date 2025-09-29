@@ -31,6 +31,7 @@ export class PostService {
     dto: CreatePostDto,
     threadId?: number,
     groupId?: number,
+    tagId?: number,
     additional?: () => Promise<void>,
   ) {
     const [{ id: postId }] = await this.db
@@ -38,8 +39,9 @@ export class PostService {
       .values({
         ownerId: ownerId,
         content: dto.content,
-        threadId: threadId,
-        groupId: groupId,
+        threadId,
+        groupId,
+        tagId,
       })
       .$returningId();
 
