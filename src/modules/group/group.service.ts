@@ -101,6 +101,18 @@ export class GroupService {
     return Result.ok('Added tag to group successfully.', null);
   }
 
+  async getAllTags(groupId: number) {
+    const tags = await this.db
+      .select({
+        id: tagTable.id,
+        name: tagTable.name,
+        color: tagTable.colorHex,
+      })
+      .from(tagTable)
+      .where(eq(tagTable.groupId, groupId));
+    return Result.ok('Fetched all tags successfully.', tags);
+  }
+
   async removeTag(tagId: number) {
     await this.db.delete(tagTable).where(eq(tagTable.id, tagId));
     return Result.ok('Removed tag from group successfully.', null);
@@ -226,6 +238,7 @@ export class GroupService {
         bannerPicture: groupTable.bannerPicture,
         visibility: groupTable.visibility,
         memberCount: groupTable.memberCount,
+        description: groupTable.description,
         status: sql<
           'none' | 'pending' | 'joined'
         >`(if(${groupMemberTable.accepted} is null, 'none', if(${groupMemberTable.accepted}, 'joined', 'pending')))`,

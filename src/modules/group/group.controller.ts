@@ -83,6 +83,12 @@ export class GroupController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
+  @Get(':id/tags')
+  async getAllTags(@Param('id', ParseIntPipe) groupId: number) {
+    const res = await this.groupService.getAllTags(groupId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   @Post(':id/join')
   @UseGuards(GroupExistGuard)
   async joinGroup(
@@ -153,6 +159,7 @@ export class GroupController {
   }
 
   @Patch(':id')
+  @ApiFile('banner', UpdateGroupDto, 'single')
   @UseGuards(GroupExistGuard, GroupOwnerGuard)
   async update(
     @Param('id', ParseIntPipe) groupId: number,

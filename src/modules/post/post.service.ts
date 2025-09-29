@@ -114,18 +114,11 @@ export class PostService {
     return Result.ok(
       'Fetched posts successfully.',
       posts.map((p) => ({
-        id: p.id,
+        ...p,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         parentPost:
           p.parentPostId !== null ? parents.get(p.parentPostId) : undefined,
-        owner: p.owner,
-        content: p.content,
-        reaction: p.reaction,
-        reactionCount: p.reactionCount,
-        replyCount: p.replyCount,
         mediaPaths: p.media ? p.media.split(';') : [],
-        dateCreated: p.dateCreated,
-        dateUpdated: p.dateUpdated,
       })),
     );
   }
@@ -142,16 +135,8 @@ export class PostService {
     );
 
     return Result.ok('Post fetched successfully', {
-      id: currentPost.id,
-      owner: currentPost.owner,
+      ...currentPost,
       parentPost,
-      content: currentPost.content,
-      reaction: currentPost.reaction,
-      reactionCount: currentPost.reactionCount,
-      replyCount: currentPost.replyCount,
-      mediaPaths: currentPost.mediaPaths,
-      dateCreated: currentPost.dateCreated,
-      dateUpdated: currentPost.dateUpdated,
     });
   }
 
@@ -279,6 +264,9 @@ export class PostService {
       content: res.content,
       reaction: res.reaction,
       reactionCount: res.reactionCount,
+      threadId: res.threadId,
+      groupId: res.groupId,
+      tag: res.tag,
       replyCount: res.replyCount,
       mediaPaths: res.media ? res.media.split(';') : [],
       dateCreated: res.dateCreated,
@@ -300,6 +288,9 @@ export class PostService {
       reactionCount: r.reactionCount,
       replyCount: r.replyCount,
       mediaPaths: r.media ? r.media.split(';') : [],
+      threadId: r.threadId,
+      groupId: r.groupId,
+      tag: r.tag,
       dateCreated: r.dateCreated,
       dateUpdated: r.dateUpdated,
     }));
