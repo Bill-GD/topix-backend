@@ -263,7 +263,10 @@ export class GroupService {
         },
         bannerPicture: groupTable.bannerPicture,
         visibility: groupTable.visibility,
-        memberCount: groupTable.memberCount,
+        memberCount: this.db.$count(
+          groupMemberTable,
+          eq(groupMemberTable.groupId, groupTable.id),
+        ),
         description: groupTable.description,
         status: sql<
           'none' | 'pending' | 'joined'

@@ -17,7 +17,6 @@ export const groupTable = mysqlTable(Tables.group, {
   name: varchar({ length: 255 }).notNull(),
   bannerPicture: text('banner_picture'),
   description: text(),
-  memberCount: int('member_count').notNull().default(1),
   visibility,
   dateCreated: timestamps.dateCreated(),
   dateUpdated: timestamps.dateUpdated(),
