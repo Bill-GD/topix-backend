@@ -83,8 +83,15 @@ export class GroupService {
   }
 
   async addPost(groupId: number, ownerId: number, dto: CreateGroupPostDto) {
-    await this.postService.create(ownerId, dto, undefined, groupId, dto.tagId);
-    return Result.ok('Added post to group successfully.', null);
+    await this.postService.create(
+      ownerId,
+      dto,
+      undefined,
+      groupId,
+      dto.tagId,
+      dto.accepted,
+    );
+    return Result.ok('Uploaded post to group successfully.', null);
   }
 
   async addThread(groupId: number, ownerId: number, dto: CreateGroupThreadDto) {

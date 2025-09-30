@@ -32,6 +32,7 @@ export class PostService {
     threadId?: number,
     groupId?: number,
     tagId?: number,
+    groupAccepted?: boolean,
     additional?: () => Promise<void>,
   ) {
     const [{ id: postId }] = await this.db
@@ -42,6 +43,7 @@ export class PostService {
         threadId,
         groupId,
         tagId,
+        groupAccepted,
       })
       .$returningId();
 

@@ -84,6 +84,7 @@ export class ThreadService {
       threadId,
       undefined,
       undefined,
+      undefined,
       async () => {
         await this.db
           .update(threadTable)
