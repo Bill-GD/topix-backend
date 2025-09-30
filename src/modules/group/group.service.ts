@@ -1,4 +1,4 @@
-import { GroupQuery } from '@/common/queries';
+import { GroupQuery, MemberQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
@@ -124,6 +124,32 @@ export class GroupService {
       .set({ ownerId: newOwnerId })
       .where(eq(groupTable.id, groupId));
     return Result.ok('Changed group owner successfully.', null);
+  }
+
+  async getAllMembers(groupId: number, memberQuery: MemberQuery) {
+    const members = await this.db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        displayName: profileTable.displayName,
+        profilePicture: profileTable.profilePicture,
+        accepted: groupMemberTable.accepted,
+        dateRequested: groupMemberTable.dateRequested,
+        dateJoined: sql<Date | null>`(if(${groupMemberTable.accepted}, ${groupMemberTable.dateJoined}, null))`,
+      })
+      .from(groupMemberTable)
+      .innerJoin(userTable, eq(userTable.id, groupMemberTable.userId))
+      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .where(
+        and(
+          eq(groupMemberTable.groupId, groupId),
+          eq(groupMemberTable.accepted, memberQuery.accepted),
+        ),
+      )
+      .limit(memberQuery.limit)
+      .offset(memberQuery.offset);
+
+    return Result.ok('Fetched all members successfully.', members);
   }
 
   async acceptMember(groupId: number, userId: number) {

@@ -6,7 +6,7 @@ import {
   GroupOwnerGuard,
   TagExistGuard,
 } from '@/common/guards';
-import { GroupQuery } from '@/common/queries';
+import { GroupQuery, MemberQuery } from '@/common/queries';
 import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { getReadableSize } from '@/common/utils/helpers';
@@ -86,6 +86,16 @@ export class GroupController {
   @Get(':id/tags')
   async getAllTags(@Param('id', ParseIntPipe) groupId: number) {
     const res = await this.groupService.getAllTags(groupId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Get(':id/members')
+  @UseGuards(GroupExistGuard)
+  async getAllMembers(
+    @Query() query: MemberQuery,
+    @Param('id', ParseIntPipe) groupId: number,
+  ) {
+    const res = await this.groupService.getAllMembers(groupId, query);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
