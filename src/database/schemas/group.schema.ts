@@ -1,5 +1,5 @@
-import { autoId, timestamps, visibility, Tables } from '@/database/utils';
 import { userTable } from '@/database/schemas/user.schema';
+import { autoId, Tables, timestamps, visibility } from '@/database/utils';
 import {
   boolean,
   int,
@@ -17,7 +17,6 @@ export const groupTable = mysqlTable(Tables.group, {
   name: varchar({ length: 255 }).notNull(),
   bannerPicture: text('banner_picture'),
   description: text(),
-  memberCount: int('member_count').notNull().default(1),
   visibility,
   dateCreated: timestamps.dateCreated(),
   dateUpdated: timestamps.dateUpdated(),
@@ -33,7 +32,8 @@ export const groupMemberTable = mysqlTable(
       .notNull()
       .references(() => userTable.id, { onDelete: 'cascade' }),
     accepted: boolean().notNull().default(false),
-    dateJoined: timestamps.dateCreated('date_joined'),
+    dateRequested: timestamps.dateCreated('date_requested'),
+    dateJoined: timestamps.dateUpdated('date_joined'),
   },
   (t) => [primaryKey({ columns: [t.groupId, t.userId] })],
 );

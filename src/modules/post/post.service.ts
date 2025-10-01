@@ -1,7 +1,7 @@
 import { PostQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
-import { DBType } from '@/common/utils/types';
+import { DBType, Reactions } from '@/common/utils/types';
 import {
   mediaTable,
   postStatsTable,
@@ -26,16 +26,30 @@ export class PostService {
     private readonly fileService: FileService,
   ) {}
 
-  async create(ownerId: number, dto: CreatePostDto) {
+  async create(
+    ownerId: number,
+    dto: CreatePostDto,
+    threadId?: number,
+    groupId?: number,
+    tagId?: number,
+    groupAccepted?: boolean,
+    additional?: () => Promise<void>,
+  ) {
     const [{ id: postId }] = await this.db
       .insert(postTable)
       .values({
         ownerId: ownerId,
         content: dto.content,
+        threadId,
+        groupId,
+        tagId,
+        groupAccepted,
       })
       .$returningId();
 
     await this.db.insert(postStatsTable).values({ postId });
+
+    await additional?.();
 
     if (dto.mediaPaths && dto.mediaPaths.length > 0) {
       await this.db.insert(mediaTable).values(
@@ -64,13 +78,17 @@ export class PostService {
     if (postQuery.tag) {
       andQueries.push(eq(tagTable.name, postQuery.tag));
     }
-    if (postQuery.parentId) {
-      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
-    }
     if (postQuery.groupId) {
       andQueries.push(eq(postTable.groupId, postQuery.groupId));
+      andQueries.push(isNull(postTable.parentPostId));
+      if (postQuery.accepted !== undefined) {
+        andQueries.push(eq(postTable.groupAccepted, postQuery.accepted));
+      }
     } else {
       andQueries.push(isNull(postTable.groupId));
+      if (postQuery.parentId) {
+        andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
+      }
     }
     if (postQuery.threadId) {
       andQueries.push(eq(postTable.threadId, postQuery.threadId));
@@ -101,18 +119,11 @@ export class PostService {
     return Result.ok(
       'Fetched posts successfully.',
       posts.map((p) => ({
-        id: p.id,
+        ...p,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         parentPost:
           p.parentPostId !== null ? parents.get(p.parentPostId) : undefined,
-        owner: p.owner,
-        content: p.content,
-        reaction: p.reaction,
-        reactionCount: p.reactionCount,
-        replyCount: p.replyCount,
-        mediaPaths: p.media ? (p.media as string).split(';') : [],
-        dateCreated: p.dateCreated,
-        dateUpdated: p.dateUpdated,
+        mediaPaths: p.media ? p.media.split(';') : [],
       })),
     );
   }
@@ -129,16 +140,8 @@ export class PostService {
     );
 
     return Result.ok('Post fetched successfully', {
-      id: currentPost.id,
-      owner: currentPost.owner,
+      ...currentPost,
       parentPost,
-      content: currentPost.content,
-      reaction: currentPost.reaction,
-      reactionCount: currentPost.reactionCount,
-      replyCount: currentPost.replyCount,
-      mediaPaths: currentPost.mediaPaths,
-      dateCreated: currentPost.dateCreated,
-      dateUpdated: currentPost.dateUpdated,
     });
   }
 
@@ -158,10 +161,6 @@ export class PostService {
         userId: userId,
         type: dto.reaction,
       });
-      await this.db
-        .update(postStatsTable)
-        .set({ reactionCount: sql`${postStatsTable.reactionCount} + 1` })
-        .where(eq(postStatsTable.postId, postId));
     }
     if (res >= 1) {
       await this.db
@@ -183,10 +182,6 @@ export class PostService {
       .where(
         and(eq(reactionTable.postId, postId), eq(reactionTable.userId, userId)),
       );
-    await this.db
-      .update(postStatsTable)
-      .set({ reactionCount: sql`${postStatsTable.reactionCount} - 1` })
-      .where(eq(postStatsTable.postId, postId));
     return Result.ok('Updated post reaction successfully.', null);
   }
 
@@ -197,6 +192,7 @@ export class PostService {
         ownerId: ownerId,
         content: dto.content,
         parentPostId: postId,
+        groupId: dto.groupId,
       })
       .$returningId();
 
@@ -225,11 +221,6 @@ export class PostService {
   }
 
   async remove(postId: number) {
-    await this.removeMultiplePosts([postId]);
-    return Result.ok('Deleted post successfully.', null);
-  }
-
-  async removeMultiplePosts(postIds: number[]) {
     const posts = await this.db
       .select({
         parentPostId: postTable.parentPostId,
@@ -241,31 +232,30 @@ export class PostService {
       })
       .from(postTable)
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
-      .where(inArray(postTable.id, postIds));
+      .where(eq(postTable.id, postId));
 
-    // separated to start async deletion first (3rd party)
     for (const p of posts) {
       if (p.media) {
         this.fileService.removeSingle(p.media.id, p.media.type);
       }
     }
 
-    for (const p of posts) {
-      if (p.parentPostId) {
-        await this.db
-          .update(postStatsTable)
-          .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-          .where(eq(postStatsTable.postId, p.parentPostId));
-      }
-      if (p.threadId) {
-        await this.db
-          .update(threadTable)
-          .set({ postCount: sql`${threadTable.postCount} - 1` })
-          .where(eq(threadTable.id, p.threadId));
-      }
+    if (posts[0].parentPostId) {
+      await this.db
+        .update(postStatsTable)
+        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
+        .where(eq(postStatsTable.postId, posts[0].parentPostId));
     }
 
-    await this.db.delete(postTable).where(inArray(postTable.id, postIds));
+    if (posts[0].threadId) {
+      await this.db
+        .update(threadTable)
+        .set({ postCount: sql`${threadTable.postCount} - 1` })
+        .where(eq(threadTable.id, posts[0].threadId));
+    }
+
+    await this.db.delete(postTable).where(eq(postTable.id, postId));
+    return Result.ok('Deleted post successfully.', null);
   }
 
   private async getSinglePost(postId: number, requesterId: number) {
@@ -280,8 +270,11 @@ export class PostService {
       content: res.content,
       reaction: res.reaction,
       reactionCount: res.reactionCount,
+      threadId: res.threadId,
+      groupId: res.groupId,
+      tag: res.tag,
       replyCount: res.replyCount,
-      mediaPaths: res.media ? (res.media as string).split(';') : [],
+      mediaPaths: res.media ? res.media.split(';') : [],
       dateCreated: res.dateCreated,
       dateUpdated: res.dateUpdated,
     };
@@ -300,7 +293,10 @@ export class PostService {
       reaction: r.reaction,
       reactionCount: r.reactionCount,
       replyCount: r.replyCount,
-      mediaPaths: r.media ? (r.media as string).split(';') : [],
+      mediaPaths: r.media ? r.media.split(';') : [],
+      threadId: r.threadId,
+      groupId: r.groupId,
+      tag: r.tag,
       dateCreated: r.dateCreated,
       dateUpdated: r.dateUpdated,
     }));
@@ -316,10 +312,12 @@ export class PostService {
           profilePicture: profileTable.profilePicture,
         },
         content: postTable.content,
-        reaction: sql`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
-        reactionCount: postStatsTable.reactionCount,
+        reaction: sql<
+          keyof typeof Reactions | null
+        >`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
+        reactionCount: sql<number>`(count(${reactionTable.userId}))`,
         replyCount: postStatsTable.replyCount,
-        media: sql`(group_concat(${mediaTable.path} separator ';'))`,
+        media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
         groupId: postTable.groupId,
@@ -339,7 +337,6 @@ export class PostService {
         postTable.id,
         reactionTable.userId,
         reactionTable.type,
-        postStatsTable.reactionCount,
         postStatsTable.replyCount,
         postTable.dateCreated,
       )

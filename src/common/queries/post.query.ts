@@ -1,7 +1,8 @@
 import { IsOptionalString, IsPositiveNumber } from '@/common/decorators';
 import { CommonQuery } from '@/common/queries/common.query';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsOptional } from 'class-validator';
 
 export class PostQuery extends CommonQuery {
   @ApiPropertyOptional()
@@ -26,4 +27,18 @@ export class PostQuery extends CommonQuery {
   @IsPositiveNumber()
   @IsOptional()
   groupId?: number;
+
+  @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => {
+    const strVal = (value as string).toLowerCase();
+    return {
+      true: true,
+      false: false,
+      undefined: undefined,
+    }[strVal];
+  })
+  @IsBoolean()
+  @IsOptional()
+  accepted?: boolean;
 }

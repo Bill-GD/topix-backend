@@ -1,7 +1,7 @@
-import { IsNotEmptyString } from '@/common/decorators';
+import { IsNotEmptyString, IsPositiveNumber } from '@/common/decorators';
 import { MediaTypes } from '@/common/utils/types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty()
@@ -16,4 +16,13 @@ export class CreatePostDto {
   @IsArray()
   @IsOptional()
   mediaPaths?: string[];
+
+  @ApiPropertyOptional()
+  @IsPositiveNumber()
+  @IsOptional()
+  groupId?: number;
+
+  @ApiProperty()
+  @IsBoolean()
+  accepted: boolean;
 }

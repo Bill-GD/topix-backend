@@ -6,7 +6,7 @@ import {
   Type,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import {
   IsNotEmpty,
@@ -24,12 +24,18 @@ export function ApiController(...extraMimeTypes: string[]) {
   );
 }
 
-export function ApiFile(fieldname: string, dtoType: Type) {
+export function ApiFile(
+  fieldname: string,
+  dtoType: Type,
+  accepts: 'single' | 'list',
+) {
   return applyDecorators(
     ApiConsumes('multipart/form-data'),
     ApiResponse({ type: ControllerResponse }),
     ApiBody({ type: dtoType }),
-    UseInterceptors(FilesInterceptor(fieldname)),
+    accepts === 'single'
+      ? UseInterceptors(FileInterceptor(fieldname))
+      : UseInterceptors(FilesInterceptor(fieldname)),
   );
 }
 

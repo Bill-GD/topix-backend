@@ -4,7 +4,6 @@ import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
   mediaTable,
-  postStatsTable,
   postTable,
   profileTable,
   tagTable,
@@ -12,6 +11,7 @@ import {
   threadTable,
   userTable,
 } from '@/database/schemas';
+import { FileService } from '@/modules/file/file.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
@@ -24,6 +24,7 @@ export class ThreadService {
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
     private readonly postService: PostService,
+    private readonly fileService: FileService,
   ) {}
 
   async getAll(threadQuery: ThreadQuery, requesterId: number) {
@@ -41,13 +42,11 @@ export class ThreadService {
       andQueries.push(isNull(threadTable.groupId));
     }
 
-    const query = this.getThreadQuery(requesterId)
+    const threads = await this.getThreadQuery(requesterId)
       .where(and(...andQueries))
       .orderBy(desc(threadTable.dateUpdated))
       .limit(threadQuery.limit)
       .offset(threadQuery.offset);
-
-    const threads = await query;
 
     return Result.ok('Fetched threads successfully.', threads);
   }
@@ -60,48 +59,39 @@ export class ThreadService {
     return Result.ok('Fetched thread successfully.', thread);
   }
 
-  async create(dto: CreateThreadDto, requesterId: number) {
+  async create(
+    dto: CreateThreadDto,
+    requesterId: number,
+    groupId?: number,
+    tagId?: number,
+  ) {
     const [{ id: threadId }] = await this.db
       .insert(threadTable)
       .values({
         ownerId: requesterId,
         title: dto.title,
+        groupId: groupId,
+        tagId: tagId,
       })
       .$returningId();
     return Result.ok('Created thread successfully.', threadId);
   }
 
   async addPost(threadId: number, ownerId: number, dto: CreatePostDto) {
-    const [{ id: postId }] = await this.db
-      .insert(postTable)
-      .values({
-        ownerId: ownerId,
-        threadId: threadId,
-        content: dto.content,
-      })
-      .$returningId();
-
-    await this.db.insert(postStatsTable).values({ postId });
-    await this.db
-      .update(threadTable)
-      .set({ postCount: sql`${threadTable.postCount} + 1` })
-      .where(eq(threadTable.id, threadId));
-
-    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
-      await this.db.insert(mediaTable).values(
-        dto.mediaPaths.map((m) => {
-          const segments = m.split('/');
-          const publicId = segments[segments.length - 1].split('.')[0];
-
-          return {
-            id: publicId,
-            postId,
-            type: dto.type,
-            path: m,
-          };
-        }),
-      );
-    }
+    await this.postService.create(
+      ownerId,
+      dto,
+      threadId,
+      undefined,
+      undefined,
+      undefined,
+      async () => {
+        await this.db
+          .update(threadTable)
+          .set({ postCount: sql`${threadTable.postCount} + 1` })
+          .where(eq(threadTable.id, threadId));
+      },
+    );
     return Result.ok('Added post to thread successfully.', null);
   }
 
@@ -115,11 +105,21 @@ export class ThreadService {
 
   async remove(threadId: number) {
     const posts = await this.db
-      .select({ id: postTable.id })
+      .select({
+        media: {
+          id: mediaTable.id,
+          type: mediaTable.type,
+        },
+      })
       .from(postTable)
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.threadId, threadId));
 
-    await this.postService.removeMultiplePosts(posts.map((p) => p.id));
+    for (const p of posts) {
+      if (p.media) {
+        this.fileService.removeSingle(p.media.id, p.media.type);
+      }
+    }
     await this.db.delete(threadTable).where(eq(threadTable.id, threadId));
     return Result.ok('Deleted thread successfully.', null);
   }
@@ -138,7 +138,7 @@ export class ThreadService {
         groupId: threadTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
         // if(`thread_follow`.user_id = 7, true, false) `following`,
-        following: sql`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
+        following: sql<boolean>`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
       })

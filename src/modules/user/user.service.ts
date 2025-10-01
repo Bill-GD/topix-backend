@@ -1,21 +1,38 @@
-import { CommonQuery } from '@/common/queries/common.query';
+import { UserQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
-import { postTable, profileTable, userTable } from '@/database/schemas';
-import { PostService } from '@/modules/post/post.service';
+import {
+  groupMemberTable,
+  mediaTable,
+  postTable,
+  profileTable,
+  userTable,
+} from '@/database/schemas';
+import { FileService } from '@/modules/file/file.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, SQL } from 'drizzle-orm';
 
 @Injectable()
 export class UserService {
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
-    private readonly postService: PostService,
+    private readonly fileService: FileService,
   ) {}
 
-  async getUsers(query: CommonQuery) {
+  async getUsers(userQuery: UserQuery) {
+    const andQueries: SQL[] = [];
+
+    if (userQuery.groupId) {
+      andQueries.push(eq(groupMemberTable.groupId, userQuery.groupId));
+      if (userQuery.accepted !== undefined) {
+        andQueries.push(eq(groupMemberTable.accepted, userQuery.accepted));
+      }
+    } else {
+      andQueries.push(isNull(groupMemberTable.groupId));
+    }
+
     const users = await this.db
       .select({
         id: userTable.id,
@@ -26,8 +43,10 @@ export class UserService {
       })
       .from(userTable)
       .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
-      .limit(query.limit)
-      .offset(query.offset);
+      .leftJoin(groupMemberTable, eq(userTable.id, groupMemberTable.userId))
+      .where(and(...andQueries))
+      .limit(userQuery.limit)
+      .offset(userQuery.offset);
 
     return Result.ok('Fetched users successfully.', users);
   }
@@ -108,11 +127,21 @@ export class UserService {
     }
 
     const posts = await this.db
-      .select({ id: postTable.id })
+      .select({
+        media: {
+          id: mediaTable.id,
+          type: mediaTable.type,
+        },
+      })
       .from(postTable)
+      .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.ownerId, user.id));
 
-    await this.postService.removeMultiplePosts(posts.map((p) => p.id));
+    for (const p of posts) {
+      if (p.media) {
+        this.fileService.removeSingle(p.media.id, p.media.type);
+      }
+    }
 
     await this.db.delete(userTable).where(eq(userTable.id, user.id));
     return Result.ok('Deleted account successfully.', null);
