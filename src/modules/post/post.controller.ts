@@ -1,24 +1,27 @@
-import { ApiController, RequesterID } from '@/common/decorators';
+import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
 import {
   AuthenticatedGuard,
   GetRequesterGuard,
   PostExistGuard,
   PostOwnerOrAdminGuard,
-  UserExistGuard,
 } from '@/common/guards';
+import { FileSizeValidatorPipe } from '@/common/pipes';
 import { PostQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import {
   Body,
   Controller,
   Delete,
+  FileTypeValidator,
   Get,
   HttpStatus,
   Param,
+  ParseFilePipe,
   ParseIntPipe,
   Patch,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -33,7 +36,25 @@ export class PostController {
 
   @Post()
   @UseGuards(GetRequesterGuard)
-  async create(@RequesterID() requesterId: number, @Body() dto: CreatePostDto) {
+  @ApiFile('files', CreatePostDto, 'list')
+  async create(
+    @RequesterID() requesterId: number,
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: '(image|video)/*',
+            fallbackToMimetype: true,
+          }),
+        ],
+        fileIsRequired: false,
+      }),
+      new FileSizeValidatorPipe(),
+    )
+    files: Array<Express.Multer.File>,
+    @Body() dto: CreatePostDto,
+  ) {
+    if (files) dto.fileObjects = files;
     const res = await this.postService.create(requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
@@ -95,11 +116,26 @@ export class PostController {
 
   @Post(':id/reply')
   @UseGuards(PostExistGuard, GetRequesterGuard)
+  @ApiFile('files', CreatePostDto, 'list')
   async reply(
     @Param('id', ParseIntPipe) postId: number,
     @RequesterID() requesterId: number,
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: '(image|video)/*',
+            fallbackToMimetype: true,
+          }),
+        ],
+        fileIsRequired: false,
+      }),
+      new FileSizeValidatorPipe(),
+    )
+    files: Array<Express.Multer.File>,
     @Body() dto: CreatePostDto,
   ) {
+    if (files) dto.fileObjects = files;
     const res = await this.postService.reply(postId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }

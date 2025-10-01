@@ -1,5 +1,6 @@
 import { PostQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
+import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
 import { DBType, Reactions } from '@/common/utils/types';
 import {
@@ -51,20 +52,8 @@ export class PostService {
 
     await additional?.();
 
-    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
-      await this.db.insert(mediaTable).values(
-        dto.mediaPaths.map((m) => {
-          const segments = m.split('/');
-          const publicId = segments[segments.length - 1].split('.')[0];
-
-          return {
-            id: publicId,
-            postId,
-            type: dto.type,
-            path: m,
-          };
-        }),
-      );
+    if (dto.fileObjects) {
+      await this.uploadFileObjects(postId, dto.type, dto.fileObjects);
     }
     return Result.ok('Uploaded post successfully.', postId);
   }
@@ -202,20 +191,8 @@ export class PostService {
       .set({ replyCount: sql`${postStatsTable.replyCount} + 1` })
       .where(eq(postStatsTable.postId, postId));
 
-    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
-      await this.db.insert(mediaTable).values(
-        dto.mediaPaths.map((m) => {
-          const segments = m.split('/');
-          const publicId = segments[segments.length - 1].split('.')[0];
-
-          return {
-            id: publicId,
-            postId: replyId,
-            type: dto.type,
-            path: m,
-          };
-        }),
-      );
+    if (dto.fileObjects) {
+      await this.uploadFileObjects(postId, dto.type, dto.fileObjects);
     }
     return Result.ok('Posted reply successfully.', null);
   }
@@ -256,6 +233,26 @@ export class PostService {
 
     await this.db.delete(postTable).where(eq(postTable.id, postId));
     return Result.ok('Deleted post successfully.', null);
+  }
+
+  private async uploadFileObjects(
+    postId: number,
+    type: 'image' | 'video',
+    fileObjects: Array<Express.Multer.File>,
+  ) {
+    const res = await this.fileService.upload(fileObjects);
+    const mediaPaths = res.data;
+
+    if (mediaPaths.length > 0) {
+      await this.db.insert(mediaTable).values(
+        mediaPaths.map((m) => ({
+          id: getCloudinaryIdFromUrl(m),
+          postId,
+          type: type,
+          path: m,
+        })),
+      );
+    }
   }
 
   private async getSinglePost(postId: number, requesterId: number) {

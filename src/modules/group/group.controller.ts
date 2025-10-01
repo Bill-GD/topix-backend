@@ -6,6 +6,7 @@ import {
   GroupOwnerGuard,
   TagExistGuard,
 } from '@/common/guards';
+import { FileSizeValidatorPipe } from '@/common/pipes';
 import { GroupQuery, MemberQuery } from '@/common/queries';
 import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
@@ -28,6 +29,7 @@ import {
   Post,
   Query,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -111,11 +113,26 @@ export class GroupController {
 
   @Post(':id/post')
   @UseGuards(GroupExistGuard)
+  @ApiFile('files', CreateGroupPostDto, 'list')
   async addPost(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: '(image|video)/*',
+            fallbackToMimetype: true,
+          }),
+        ],
+        fileIsRequired: false,
+      }),
+      new FileSizeValidatorPipe(),
+    )
+    files: Array<Express.Multer.File>,
     @Body() dto: CreateGroupPostDto,
   ) {
+    if (files) dto.fileObjects = files;
     const res = await this.groupService.addPost(groupId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }

@@ -42,20 +42,6 @@ export class FileService {
   }
 
   private async uploadSingle(media: Express.Multer.File) {
-    const isImage = media.mimetype.includes('image/');
-    const isVideo = media.mimetype.includes('video/');
-
-    if (isImage && media.size > ImageSizeLimit) {
-      throw new BadRequestException(
-        `Image size within ${getReadableSize(ImageSizeLimit)}, got ${getReadableSize(media.size)}.`,
-      );
-    }
-    if (isVideo && media.size > VideoSizeLimit) {
-      throw new BadRequestException(
-        `Video size within ${getReadableSize(VideoSizeLimit)}, got ${getReadableSize(media.size)}.`,
-      );
-    }
-
     const parts = media.originalname.split('.');
     media.filename = `${Date.now()}.${parts.pop()}`;
 

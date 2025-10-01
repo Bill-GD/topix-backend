@@ -1,10 +1,11 @@
-import { ApiController, RequesterID } from '@/common/decorators';
+import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
 import {
   AuthenticatedGuard,
   GetRequesterGuard,
   ThreadExistGuard,
   ThreadOwnerGuard,
 } from '@/common/guards';
+import { FileSizeValidatorPipe } from '@/common/pipes';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
@@ -14,13 +15,16 @@ import {
   Body,
   Controller,
   Delete,
+  FileTypeValidator,
   Get,
   HttpStatus,
   Param,
+  ParseFilePipe,
   ParseIntPipe,
   Patch,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
 import { ThreadService } from './thread.service';
@@ -63,11 +67,26 @@ export class ThreadController {
 
   @Post(':id/post')
   @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
+  @ApiFile('files', CreatePostDto, 'list')
   async addPost(
     @Param('id', ParseIntPipe) threadId: number,
     @RequesterID() requesterId: number,
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: '(image|video)/*',
+            fallbackToMimetype: true,
+          }),
+        ],
+        fileIsRequired: false,
+      }),
+      new FileSizeValidatorPipe(),
+    )
+    files: Array<Express.Multer.File>,
     @Body() dto: CreatePostDto,
   ) {
+    if (files) dto.fileObjects = files;
     const res = await this.threadService.addPost(threadId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
