@@ -25,9 +25,20 @@ export class CreatePostDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsPositiveNumber()
+  threadId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsPositiveNumber()
   groupId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsPositiveNumber()
+  tagId?: number;
 
   @ApiProperty()
   @IsBoolean()
-  accepted: boolean;
+  @IsOptional()
+  approved?: boolean;
 }

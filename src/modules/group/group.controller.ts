@@ -11,9 +11,9 @@ import { GroupQuery, MemberQuery } from '@/common/queries';
 import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { getReadableSize } from '@/common/utils/helpers';
-import { CreateGroupPostDto } from '@/modules/group/dto/create-group-post.dto';
 import { CreateGroupThreadDto } from '@/modules/group/dto/create-group-thread.dto';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import {
   Body,
   Controller,
@@ -113,7 +113,7 @@ export class GroupController {
 
   @Post(':id/post')
   @UseGuards(GroupExistGuard)
-  @ApiFile('files', CreateGroupPostDto, 'list')
+  @ApiFile('files', CreatePostDto, 'list')
   async addPost(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -130,7 +130,7 @@ export class GroupController {
       new FileSizeValidatorPipe(),
     )
     files: Array<Express.Multer.File>,
-    @Body() dto: CreateGroupPostDto,
+    @Body() dto: CreatePostDto,
   ) {
     if (files) dto.fileObjects = files;
     const res = await this.groupService.addPost(groupId, requesterId, dto);

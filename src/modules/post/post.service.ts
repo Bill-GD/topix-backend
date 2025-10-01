@@ -30,10 +30,6 @@ export class PostService {
   async create(
     ownerId: number,
     dto: CreatePostDto,
-    threadId?: number,
-    groupId?: number,
-    tagId?: number,
-    groupAccepted?: boolean,
     additional?: () => Promise<void>,
   ) {
     const [{ id: postId }] = await this.db
@@ -41,10 +37,10 @@ export class PostService {
       .values({
         ownerId: ownerId,
         content: dto.content,
-        threadId,
-        groupId,
-        tagId,
-        groupAccepted,
+        threadId: dto.threadId,
+        groupId: dto.groupId,
+        tagId: dto.tagId,
+        groupApproved: dto.approved,
       })
       .$returningId();
 
@@ -67,17 +63,16 @@ export class PostService {
     if (postQuery.tag) {
       andQueries.push(eq(tagTable.name, postQuery.tag));
     }
+    if (postQuery.parentId) {
+      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
+    }
     if (postQuery.groupId) {
       andQueries.push(eq(postTable.groupId, postQuery.groupId));
-      andQueries.push(isNull(postTable.parentPostId));
       if (postQuery.accepted !== undefined) {
-        andQueries.push(eq(postTable.groupAccepted, postQuery.accepted));
+        andQueries.push(eq(postTable.groupApproved, postQuery.accepted));
       }
     } else {
       andQueries.push(isNull(postTable.groupId));
-      if (postQuery.parentId) {
-        andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
-      }
     }
     if (postQuery.threadId) {
       andQueries.push(eq(postTable.threadId, postQuery.threadId));
@@ -319,7 +314,7 @@ export class PostService {
         threadId: postTable.threadId,
         groupId: postTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
-        groupAccepted: postTable.groupAccepted,
+        groupApproved: postTable.groupApproved,
         dateCreated: postTable.dateCreated,
         dateUpdated: postTable.dateUpdated,
       })

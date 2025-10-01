@@ -13,9 +13,9 @@ import {
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
-import { CreateGroupPostDto } from '@/modules/group/dto/create-group-post.dto';
 import { CreateGroupThreadDto } from '@/modules/group/dto/create-group-thread.dto';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
@@ -82,15 +82,9 @@ export class GroupService {
     return Result.ok('Fetched group successfully.', group);
   }
 
-  async addPost(groupId: number, ownerId: number, dto: CreateGroupPostDto) {
-    await this.postService.create(
-      ownerId,
-      dto,
-      undefined,
-      groupId,
-      dto.tagId,
-      dto.accepted,
-    );
+  async addPost(groupId: number, ownerId: number, dto: CreatePostDto) {
+    dto.groupId = groupId;
+    await this.postService.create(ownerId, dto, undefined);
     return Result.ok('Uploaded post to group successfully.', null);
   }
 
@@ -187,7 +181,7 @@ export class GroupService {
   async acceptPost(postId: number) {
     await this.db
       .update(postTable)
-      .set({ groupAccepted: true, dateUpdated: null })
+      .set({ groupApproved: true, dateUpdated: null })
       .where(eq(postTable.id, postId));
     return Result.ok('Approved member successfully.', null);
   }

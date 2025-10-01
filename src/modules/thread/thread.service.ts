@@ -78,20 +78,13 @@ export class ThreadService {
   }
 
   async addPost(threadId: number, ownerId: number, dto: CreatePostDto) {
-    await this.postService.create(
-      ownerId,
-      dto,
-      threadId,
-      undefined,
-      undefined,
-      undefined,
-      async () => {
-        await this.db
-          .update(threadTable)
-          .set({ postCount: sql`${threadTable.postCount} + 1` })
-          .where(eq(threadTable.id, threadId));
-      },
-    );
+    dto.threadId = threadId;
+    await this.postService.create(ownerId, dto, async () => {
+      await this.db
+        .update(threadTable)
+        .set({ postCount: sql`${threadTable.postCount} + 1` })
+        .where(eq(threadTable.id, threadId));
+    });
     return Result.ok('Added post to thread successfully.', null);
   }
 

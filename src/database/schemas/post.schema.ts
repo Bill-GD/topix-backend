@@ -33,7 +33,7 @@ export const postTable = mysqlTable(
       onDelete: 'set null',
     }),
     content: text().notNull(),
-    groupAccepted: boolean('group_accepted').notNull().default(false),
+    groupApproved: boolean('group_approved').notNull().default(false),
     visibility,
     dateCreated: timestamps.dateCreated(),
     dateUpdated: timestamps.dateUpdated(),
