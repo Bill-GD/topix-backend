@@ -9,7 +9,14 @@ import {
 
 @Injectable()
 export class FileSizeValidatorPipe implements PipeTransform {
-  transform(files: Array<Express.Multer.File>, metadata: ArgumentMetadata) {
+  transform(
+    value: Array<Express.Multer.File> | Express.Multer.File,
+    metadata: ArgumentMetadata,
+  ) {
+    const files: Array<Express.Multer.File> = [];
+    if (!Array.isArray(value)) files.push(value);
+    else files.push(...value);
+
     for (const file of files) {
       const isImage = file.mimetype.includes('image/');
       const isVideo = file.mimetype.includes('video/');
@@ -25,6 +32,6 @@ export class FileSizeValidatorPipe implements PipeTransform {
         );
       }
     }
-    return true;
+    return value;
   }
 }

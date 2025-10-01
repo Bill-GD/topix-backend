@@ -1,17 +1,7 @@
-import {
-  CloudinaryProviderKey,
-  ImageSizeLimit,
-  VideoSizeLimit,
-} from '@/common/utils/constants';
-import { getReadableSize } from '@/common/utils/helpers';
+import { CloudinaryProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { Cloudinary } from '@/common/utils/types';
-import {
-  BadRequestException,
-  HttpException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
