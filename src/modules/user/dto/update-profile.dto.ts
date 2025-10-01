@@ -1,5 +1,5 @@
 import { IsOptionalString } from '@/common/decorators';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiHideProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({
@@ -16,11 +16,13 @@ export class UpdateProfileDto {
   @IsOptionalString()
   displayName?: string;
 
-  @ApiPropertyOptional()
-  @IsOptionalString()
-  description?: string;
+  @ApiPropertyOptional({ format: 'binary' })
+  profilePicture?: string;
+
+  @ApiHideProperty()
+  profilePictureFile?: Express.Multer.File;
 
   @ApiPropertyOptional()
   @IsOptionalString()
-  profilePicture?: string;
+  description?: string;
 }

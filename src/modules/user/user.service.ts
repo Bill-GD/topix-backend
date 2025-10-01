@@ -92,6 +92,12 @@ export class UserService {
   ): Promise<Result<null>> {
     const user = await this.getUserById(id);
 
+    let profilePictureUrl: string | undefined;
+    if (dto.profilePictureFile) {
+      const res = await this.fileService.upload([dto.profilePictureFile]);
+      profilePictureUrl = res.data[0];
+    }
+
     if (dto.username && user.username !== dto.username) {
       const count = await this.db.$count(
         userTable,
@@ -112,7 +118,7 @@ export class UserService {
         .set({
           displayName: dto.displayName,
           description: dto.description,
-          profilePicture: dto.profilePicture,
+          profilePicture: profilePictureUrl,
         })
         .where(eq(profileTable.userId, id));
     }
