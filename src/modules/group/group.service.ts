@@ -187,7 +187,7 @@ export class GroupService {
   async acceptPost(postId: number) {
     await this.db
       .update(postTable)
-      .set({ groupAccepted: true })
+      .set({ groupAccepted: true, dateUpdated: null })
       .where(eq(postTable.id, postId));
     return Result.ok('Approved member successfully.', null);
   }
