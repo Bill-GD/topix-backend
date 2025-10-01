@@ -35,8 +35,8 @@ export class GroupService {
   async create(dto: CreateGroupDto, requesterId: number) {
     let bannerUrl: string | undefined;
     if (dto.bannerFile) {
-      const res = await this.fileService.uploadSingle(dto.bannerFile);
-      bannerUrl = res.data;
+      const res = await this.fileService.upload([dto.bannerFile]);
+      bannerUrl = res.data[0];
     }
 
     const [{ id: groupId }] = await this.db
@@ -201,9 +201,9 @@ export class GroupService {
         .where(eq(groupTable.id, groupId));
       if (oldBannerUrl) {
         const publicId = getCloudinaryIdFromUrl(oldBannerUrl);
-        this.fileService.removeSingle(publicId, 'image');
+        this.fileService.remove([{ publicId, type: 'image' }]);
       }
-      bannerUrl = (await this.fileService.uploadSingle(dto.bannerFile)).data;
+      bannerUrl = (await this.fileService.upload([dto.bannerFile])).data[0];
     }
 
     await this.db
@@ -231,10 +231,12 @@ export class GroupService {
       .from(groupTable)
       .where(eq(groupTable.id, groupId));
     if (bannerPicture) {
-      this.fileService.removeSingle(
-        getCloudinaryIdFromUrl(bannerPicture),
-        'image',
-      );
+      this.fileService.remove([
+        {
+          publicId: getCloudinaryIdFromUrl(bannerPicture),
+          type: 'image',
+        },
+      ]);
     }
 
     const posts = await this.db
@@ -248,11 +250,11 @@ export class GroupService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.groupId, groupId));
 
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
-    }
+    this.fileService.remove(
+      posts
+        .filter((e) => e.media !== null)
+        .map((e) => ({ publicId: e.media!.id, type: e.media!.type })),
+    );
 
     await this.db.delete(groupTable).where(eq(groupTable.id, groupId));
     return Result.ok('Deleted group successfully.', null);

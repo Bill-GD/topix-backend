@@ -234,11 +234,11 @@ export class PostService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.id, postId));
 
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
-    }
+    this.fileService.remove(
+      posts
+        .filter((e) => e.media !== null)
+        .map((e) => ({ publicId: e.media!.id, type: e.media!.type })),
+    );
 
     if (posts[0].parentPostId) {
       await this.db

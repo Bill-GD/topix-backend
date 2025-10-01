@@ -115,11 +115,12 @@ export class ThreadService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.threadId, threadId));
 
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
-    }
+    this.fileService.remove(
+      posts
+        .filter((e) => e.media !== null)
+        .map((e) => ({ publicId: e.media!.id, type: e.media!.type })),
+    );
+
     await this.db.delete(threadTable).where(eq(threadTable.id, threadId));
     return Result.ok('Deleted thread successfully.', null);
   }

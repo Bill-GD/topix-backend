@@ -1,7 +1,17 @@
-import { CloudinaryProviderKey } from '@/common/utils/constants';
+import {
+  CloudinaryProviderKey,
+  ImageSizeLimit,
+  VideoSizeLimit,
+} from '@/common/utils/constants';
+import { getReadableSize } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
 import { Cloudinary } from '@/common/utils/types';
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
@@ -10,7 +20,42 @@ export class FileService {
     @Inject(CloudinaryProviderKey) private readonly cloudinary: Cloudinary,
   ) {}
 
-  async uploadSingle(media: Express.Multer.File) {
+  async upload(list: Array<Express.Multer.File>) {
+    const ops = list.map((file) => this.uploadSingle(file));
+    const resList = await Promise.all(ops);
+    return Result.ok(
+      'Files uploaded successfully.',
+      resList.map((r) => r.data),
+    );
+  }
+
+  remove(files: { publicId: string; type: 'image' | 'video' }[]) {
+    for (const file of files) {
+      this.removeSingle(file.publicId, file.type);
+    }
+  }
+
+  private removeSingle(publicId: string, type: 'image' | 'video') {
+    void this.cloudinary.uploader.destroy(publicId, {
+      resource_type: type,
+    });
+  }
+
+  private async uploadSingle(media: Express.Multer.File) {
+    const isImage = media.mimetype.includes('image/');
+    const isVideo = media.mimetype.includes('video/');
+
+    if (isImage && media.size > ImageSizeLimit) {
+      throw new BadRequestException(
+        `Image size within ${getReadableSize(ImageSizeLimit)}, got ${getReadableSize(media.size)}.`,
+      );
+    }
+    if (isVideo && media.size > VideoSizeLimit) {
+      throw new BadRequestException(
+        `Video size within ${getReadableSize(VideoSizeLimit)}, got ${getReadableSize(media.size)}.`,
+      );
+    }
+
     const parts = media.originalname.split('.');
     media.filename = `${Date.now()}.${parts.pop()}`;
 
@@ -32,20 +77,5 @@ export class FileService {
     });
 
     return Result.ok('File uploaded successfully.', res.secure_url);
-  }
-
-  removeSingle(publicId: string, type: 'image' | 'video') {
-    void this.cloudinary.uploader.destroy(publicId, {
-      resource_type: type,
-    });
-  }
-
-  async uploadList(list: Array<Express.Multer.File>) {
-    const ops = list.map((file) => this.uploadSingle(file));
-    const resList = await Promise.all(ops);
-    return Result.ok(
-      'Files uploaded successfully.',
-      resList.map((r) => r.data),
-    );
   }
 }
