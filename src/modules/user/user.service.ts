@@ -12,7 +12,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, isNull, SQL } from 'drizzle-orm';
+import { and, eq, SQL } from 'drizzle-orm';
 
 @Injectable()
 export class UserService {
@@ -22,17 +22,6 @@ export class UserService {
   ) {}
 
   async getUsers(userQuery: UserQuery) {
-    const andQueries: SQL[] = [];
-
-    if (userQuery.groupId) {
-      andQueries.push(eq(groupMemberTable.groupId, userQuery.groupId));
-      if (userQuery.accepted !== undefined) {
-        andQueries.push(eq(groupMemberTable.accepted, userQuery.accepted));
-      }
-    } else {
-      andQueries.push(isNull(groupMemberTable.groupId));
-    }
-
     const users = await this.db
       .select({
         id: userTable.id,
@@ -43,8 +32,6 @@ export class UserService {
       })
       .from(userTable)
       .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
-      .leftJoin(groupMemberTable, eq(userTable.id, groupMemberTable.userId))
-      .where(and(...andQueries))
       .limit(userQuery.limit)
       .offset(userQuery.offset);
 

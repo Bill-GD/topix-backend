@@ -1,6 +1,6 @@
 import { IsNotEmptyString } from '@/common/decorators';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, Length } from 'class-validator';
+import { IsEmail, IsNotEmpty, Length, NotContains } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'example@gmail.com' })
@@ -13,6 +13,9 @@ export class RegisterDto {
     description: 'The unique handle of an user.',
   })
   @IsNotEmptyString()
+  @NotContains(' ', {
+    message: (args) => 'Username must not contain spaces.',
+  })
   username: string;
 
   @ApiProperty({ example: 'password123' })

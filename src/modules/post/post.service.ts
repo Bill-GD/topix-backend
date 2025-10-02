@@ -65,6 +65,8 @@ export class PostService {
     }
     if (postQuery.parentId) {
       andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
+    } else {
+      andQueries.push(isNull(postTable.parentPostId));
     }
     if (postQuery.groupId) {
       andQueries.push(eq(postTable.groupId, postQuery.groupId));
