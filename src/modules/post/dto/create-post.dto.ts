@@ -5,6 +5,7 @@ import {
   ApiProperty,
   ApiPropertyOptional,
 } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreatePostDto {
@@ -37,7 +38,16 @@ export class CreatePostDto {
   @IsPositiveNumber()
   tagId?: number;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => {
+    const strVal = (value as string).toLowerCase();
+    return {
+      true: true,
+      false: false,
+      undefined: undefined,
+    }[strVal];
+  })
   @IsBoolean()
   @IsOptional()
   approved?: boolean;
