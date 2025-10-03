@@ -33,8 +33,8 @@ export class ThreadService {
     if (threadQuery.username) {
       andQueries.push(eq(userTable.username, threadQuery.username));
     }
-    if (threadQuery.tag) {
-      andQueries.push(eq(tagTable.name, threadQuery.tag));
+    if (threadQuery.tagId) {
+      andQueries.push(eq(tagTable.id, threadQuery.tagId));
     }
     if (threadQuery.groupId) {
       andQueries.push(eq(threadTable.groupId, threadQuery.groupId));
@@ -124,6 +124,7 @@ export class ThreadService {
         id: threadTable.id,
         title: threadTable.title,
         owner: {
+          id: userTable.id,
           username: userTable.username,
           displayName: profileTable.displayName,
           profilePicture: profileTable.profilePicture,

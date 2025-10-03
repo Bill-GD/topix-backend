@@ -260,6 +260,7 @@ export class GroupService {
         id: groupTable.id,
         name: groupTable.name,
         owner: {
+          id: userTable.id,
           username: userTable.username,
           displayName: profileTable.displayName,
           profilePicture: profileTable.profilePicture,

@@ -2,7 +2,7 @@ import { PostQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
-import { DBType, Reactions } from '@/common/utils/types';
+import { DBType } from '@/common/utils/types';
 import {
   mediaTable,
   postStatsTable,
@@ -60,26 +60,27 @@ export class PostService {
     if (postQuery.username) {
       andQueries.push(eq(userTable.username, postQuery.username));
     }
-    if (postQuery.tag) {
-      andQueries.push(eq(tagTable.name, postQuery.tag));
-    }
     if (postQuery.parentId) {
       andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
-    } else {
-      andQueries.push(isNull(postTable.parentPostId));
     }
-    if (postQuery.groupId) {
-      andQueries.push(eq(postTable.groupId, postQuery.groupId));
-      if (postQuery.accepted !== undefined) {
-        andQueries.push(eq(postTable.groupApproved, postQuery.accepted));
-      }
-    } else {
-      andQueries.push(isNull(postTable.groupId));
-    }
+
     if (postQuery.threadId) {
       andQueries.push(eq(postTable.threadId, postQuery.threadId));
     } else {
       andQueries.push(isNull(postTable.threadId));
+    }
+
+    if (postQuery.groupId) {
+      andQueries.push(eq(postTable.groupId, postQuery.groupId));
+      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
+      if (postQuery.accepted !== undefined) {
+        andQueries.push(eq(postTable.groupApproved, postQuery.accepted));
+      }
+      if (postQuery.tagId) {
+        andQueries.push(eq(tagTable.id, postQuery.tagId));
+      }
+    } else {
+      andQueries.push(isNull(postTable.groupId));
     }
 
     const posts = await this.getPostQuery(requesterId)
@@ -301,15 +302,17 @@ export class PostService {
       .select({
         id: postTable.id,
         owner: {
+          id: userTable.id,
           username: userTable.username,
           displayName: profileTable.displayName,
           profilePicture: profileTable.profilePicture,
         },
         content: postTable.content,
-        reaction: sql<
-          keyof typeof Reactions | null
-        >`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
-        reactionCount: sql<number>`(count(${reactionTable.userId}))`,
+        reaction: reactionTable.type,
+        reactionCount: this.db.$count(
+          reactionTable,
+          eq(reactionTable.postId, postTable.id),
+        ),
         replyCount: postStatsTable.replyCount,
         media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
@@ -324,7 +327,13 @@ export class PostService {
       .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
       .innerJoin(userTable, eq(userTable.id, postTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-      .leftJoin(reactionTable, eq(reactionTable.postId, postTable.id))
+      .leftJoin(
+        reactionTable,
+        and(
+          eq(reactionTable.postId, postTable.id),
+          eq(reactionTable.userId, requesterId),
+        ),
+      )
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .leftJoin(tagTable, eq(postTable.tagId, tagTable.id))
       .groupBy(
