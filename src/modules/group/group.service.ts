@@ -254,6 +254,23 @@ export class GroupService {
     return Result.ok('Deleted group successfully.', null);
   }
 
+  async getJoinStatus(groupId: number, requesterId: number) {
+    const res = await this.db
+      .select({ status: groupMemberTable.accepted })
+      .from(groupMemberTable)
+      .where(
+        and(
+          eq(groupMemberTable.groupId, groupId),
+          eq(groupMemberTable.userId, requesterId),
+        ),
+      );
+
+    return Result.ok(
+      'Fetched group status successfully.',
+      res.length > 0 ? res[0].status : false,
+    );
+  }
+
   private getGroupQuery(requesterId: number) {
     return this.db
       .select({
@@ -272,9 +289,7 @@ export class GroupService {
           eq(groupMemberTable.groupId, groupTable.id),
         ),
         description: groupTable.description,
-        status: sql<
-          'none' | 'pending' | 'joined'
-        >`(if(${groupMemberTable.accepted} is null, 'none', if(${groupMemberTable.accepted}, 'joined', 'pending')))`,
+        status: groupMemberTable.accepted,
         dateJoined: groupMemberTable.dateJoined,
         dateCreated: groupTable.dateCreated,
         dateUpdated: groupTable.dateUpdated,

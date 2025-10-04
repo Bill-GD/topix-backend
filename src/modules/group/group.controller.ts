@@ -85,6 +85,15 @@ export class GroupController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
+  @Get(':id/join-status')
+  async getJoinStatus(
+    @Param('id', ParseIntPipe) groupId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.groupService.getJoinStatus(groupId, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   @Get(':id/tags')
   async getAllTags(@Param('id', ParseIntPipe) groupId: number) {
     const res = await this.groupService.getAllTags(groupId);
