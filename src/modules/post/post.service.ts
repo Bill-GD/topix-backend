@@ -180,6 +180,7 @@ export class PostService {
         content: dto.content,
         parentPostId: postId,
         groupId: dto.groupId,
+        threadId: dto.threadId,
       })
       .$returningId();
 
