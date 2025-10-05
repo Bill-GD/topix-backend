@@ -12,7 +12,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, isNull, SQL } from 'drizzle-orm';
+import { and, eq, SQL } from 'drizzle-orm';
 
 @Injectable()
 export class UserService {
@@ -22,17 +22,6 @@ export class UserService {
   ) {}
 
   async getUsers(userQuery: UserQuery) {
-    const andQueries: SQL[] = [];
-
-    if (userQuery.groupId) {
-      andQueries.push(eq(groupMemberTable.groupId, userQuery.groupId));
-      if (userQuery.accepted !== undefined) {
-        andQueries.push(eq(groupMemberTable.accepted, userQuery.accepted));
-      }
-    } else {
-      andQueries.push(isNull(groupMemberTable.groupId));
-    }
-
     const users = await this.db
       .select({
         id: userTable.id,
@@ -43,8 +32,6 @@ export class UserService {
       })
       .from(userTable)
       .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
-      .leftJoin(groupMemberTable, eq(userTable.id, groupMemberTable.userId))
-      .where(and(...andQueries))
       .limit(userQuery.limit)
       .offset(userQuery.offset);
 
@@ -92,6 +79,12 @@ export class UserService {
   ): Promise<Result<null>> {
     const user = await this.getUserById(id);
 
+    let profilePictureUrl: string | undefined;
+    if (dto.profilePictureFile) {
+      const res = await this.fileService.upload([dto.profilePictureFile]);
+      profilePictureUrl = res.data[0];
+    }
+
     if (dto.username && user.username !== dto.username) {
       const count = await this.db.$count(
         userTable,
@@ -112,7 +105,7 @@ export class UserService {
         .set({
           displayName: dto.displayName,
           description: dto.description,
-          profilePicture: dto.profilePicture,
+          profilePicture: profilePictureUrl,
         })
         .where(eq(profileTable.userId, id));
     }
@@ -137,11 +130,11 @@ export class UserService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.ownerId, user.id));
 
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
-    }
+    this.fileService.remove(
+      posts
+        .filter((e) => e.media !== null)
+        .map((e) => ({ publicId: e.media!.id, type: e.media!.type })),
+    );
 
     await this.db.delete(userTable).where(eq(userTable.id, user.id));
     return Result.ok('Deleted account successfully.', null);

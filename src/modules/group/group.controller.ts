@@ -6,13 +6,14 @@ import {
   GroupOwnerGuard,
   TagExistGuard,
 } from '@/common/guards';
+import { FileSizeValidatorPipe } from '@/common/pipes';
 import { GroupQuery, MemberQuery } from '@/common/queries';
 import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { getReadableSize } from '@/common/utils/helpers';
-import { CreateGroupPostDto } from '@/modules/group/dto/create-group-post.dto';
 import { CreateGroupThreadDto } from '@/modules/group/dto/create-group-thread.dto';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import {
   Body,
   Controller,
@@ -28,6 +29,7 @@ import {
   Post,
   Query,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -83,6 +85,15 @@ export class GroupController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
+  @Get(':id/join-status')
+  async getJoinStatus(
+    @Param('id', ParseIntPipe) groupId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.groupService.getJoinStatus(groupId, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   @Get(':id/tags')
   async getAllTags(@Param('id', ParseIntPipe) groupId: number) {
     const res = await this.groupService.getAllTags(groupId);
@@ -111,11 +122,26 @@ export class GroupController {
 
   @Post(':id/post')
   @UseGuards(GroupExistGuard)
+  @ApiFile('files', CreatePostDto, 'list')
   async addPost(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
-    @Body() dto: CreateGroupPostDto,
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: '(image|video)/*',
+            fallbackToMimetype: true,
+          }),
+        ],
+        fileIsRequired: false,
+      }),
+      new FileSizeValidatorPipe(),
+    )
+    files: Array<Express.Multer.File>,
+    @Body() dto: CreatePostDto,
   ) {
+    if (files) dto.fileObjects = files;
     const res = await this.groupService.addPost(groupId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }

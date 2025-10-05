@@ -1,4 +1,4 @@
-import { ApiController, RequesterID } from '@/common/decorators';
+import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
 import {
   AccountOwnerGuard,
   AuthenticatedGuard,
@@ -6,6 +6,7 @@ import {
   IsAdminGuard,
   UserExistGuard,
 } from '@/common/guards';
+import { FileSizeValidatorPipe } from '@/common/pipes';
 import { UserQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
@@ -15,12 +16,15 @@ import {
   ConflictException,
   Controller,
   Delete,
+  FileTypeValidator,
   ForbiddenException,
   Get,
   HttpStatus,
   Param,
+  ParseFilePipe,
   Patch,
   Query,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 
@@ -63,10 +67,25 @@ export class UserController {
 
   @Patch('me')
   @UseGuards(GetRequesterGuard)
+  @ApiFile('profilePicture', UpdateProfileDto, 'single')
   async updateProfile(
     @RequesterID() requesterId: number,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new FileTypeValidator({
+            fileType: 'image/*',
+            fallbackToMimetype: true,
+          }),
+        ],
+        fileIsRequired: false,
+      }),
+      new FileSizeValidatorPipe(),
+    )
+    profilePicture: Express.Multer.File,
     @Body() dto: UpdateProfileDto,
   ) {
+    if (profilePicture) dto.profilePictureFile = profilePicture;
     const res = await this.userService.updateProfileInfo(requesterId, dto);
 
     if (!res.success) {

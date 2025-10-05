@@ -10,10 +10,6 @@ export class PostQuery extends CommonQuery {
   username?: string;
 
   @ApiPropertyOptional()
-  @IsOptionalString()
-  tag?: string;
-
-  @ApiPropertyOptional()
   @IsPositiveNumber()
   @IsOptional()
   parentId?: number;
@@ -27,6 +23,11 @@ export class PostQuery extends CommonQuery {
   @IsPositiveNumber()
   @IsOptional()
   groupId?: number;
+
+  @ApiPropertyOptional()
+  @IsPositiveNumber()
+  @IsOptional()
+  tagId?: number;
 
   @ApiPropertyOptional()
   @Type(() => String)

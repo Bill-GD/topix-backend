@@ -9,11 +9,12 @@ export class ThreadQuery extends CommonQuery {
   username?: string;
 
   @ApiPropertyOptional()
-  @IsOptionalString()
-  tag?: string;
+  @IsPositiveNumber()
+  @IsOptional()
+  groupId?: number;
 
   @ApiPropertyOptional()
   @IsPositiveNumber()
   @IsOptional()
-  groupId?: number;
+  tagId?: number;
 }

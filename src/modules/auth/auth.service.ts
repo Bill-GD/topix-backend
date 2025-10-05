@@ -110,10 +110,15 @@ export class AuthService {
         id: userTable.id,
         password: userTable.password,
         role: userTable.role,
+        verified: userTable.verified,
       })
       .from(userTable)
       .where(eq(userTable.username, dto.username))
       .limit(1);
+
+    if (!user.verified) {
+      return Result.fail('User is not verified.');
+    }
 
     if (!this.crypto.verifyPassword(dto.password, user.password)) {
       return Result.fail('Password is incorrect.');

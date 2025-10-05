@@ -33,8 +33,8 @@ export class ThreadService {
     if (threadQuery.username) {
       andQueries.push(eq(userTable.username, threadQuery.username));
     }
-    if (threadQuery.tag) {
-      andQueries.push(eq(tagTable.name, threadQuery.tag));
+    if (threadQuery.tagId) {
+      andQueries.push(eq(tagTable.id, threadQuery.tagId));
     }
     if (threadQuery.groupId) {
       andQueries.push(eq(threadTable.groupId, threadQuery.groupId));
@@ -78,20 +78,13 @@ export class ThreadService {
   }
 
   async addPost(threadId: number, ownerId: number, dto: CreatePostDto) {
-    await this.postService.create(
-      ownerId,
-      dto,
-      threadId,
-      undefined,
-      undefined,
-      undefined,
-      async () => {
-        await this.db
-          .update(threadTable)
-          .set({ postCount: sql`${threadTable.postCount} + 1` })
-          .where(eq(threadTable.id, threadId));
-      },
-    );
+    dto.threadId = threadId;
+    await this.postService.create(ownerId, dto, async () => {
+      await this.db
+        .update(threadTable)
+        .set({ postCount: sql`${threadTable.postCount} + 1` })
+        .where(eq(threadTable.id, threadId));
+    });
     return Result.ok('Added post to thread successfully.', null);
   }
 
@@ -115,11 +108,12 @@ export class ThreadService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.threadId, threadId));
 
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
-    }
+    this.fileService.remove(
+      posts
+        .filter((e) => e.media !== null)
+        .map((e) => ({ publicId: e.media!.id, type: e.media!.type })),
+    );
+
     await this.db.delete(threadTable).where(eq(threadTable.id, threadId));
     return Result.ok('Deleted thread successfully.', null);
   }
@@ -130,6 +124,7 @@ export class ThreadService {
         id: threadTable.id,
         title: threadTable.title,
         owner: {
+          id: userTable.id,
           username: userTable.username,
           displayName: profileTable.displayName,
           profilePicture: profileTable.profilePicture,

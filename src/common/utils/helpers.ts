@@ -14,11 +14,11 @@ export function getCloudinaryIdFromUrl(url: string): string {
 
 export function getReadableSize(byte: number): string {
   let size = byte;
-  const postfix = ['B', 'KB', 'MB'];
+  const postfix = ['B', 'KB', 'MB', 'GB'];
   let postfixIndex = 0;
   while (size > 1024) {
     size /= 1024;
     postfixIndex++;
   }
-  return `${size} ${postfix[postfixIndex]}`;
+  return `${size.toPrecision(2)} ${postfix[postfixIndex]}`;
 }

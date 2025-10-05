@@ -1,7 +1,8 @@
 import { PostQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
+import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
-import { DBType, Reactions } from '@/common/utils/types';
+import { DBType } from '@/common/utils/types';
 import {
   mediaTable,
   postStatsTable,
@@ -29,10 +30,6 @@ export class PostService {
   async create(
     ownerId: number,
     dto: CreatePostDto,
-    threadId?: number,
-    groupId?: number,
-    tagId?: number,
-    groupAccepted?: boolean,
     additional?: () => Promise<void>,
   ) {
     const [{ id: postId }] = await this.db
@@ -40,10 +37,10 @@ export class PostService {
       .values({
         ownerId: ownerId,
         content: dto.content,
-        threadId,
-        groupId,
-        tagId,
-        groupAccepted,
+        threadId: dto.threadId,
+        groupId: dto.groupId,
+        tagId: dto.tagId,
+        groupApproved: dto.approved,
       })
       .$returningId();
 
@@ -51,20 +48,8 @@ export class PostService {
 
     await additional?.();
 
-    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
-      await this.db.insert(mediaTable).values(
-        dto.mediaPaths.map((m) => {
-          const segments = m.split('/');
-          const publicId = segments[segments.length - 1].split('.')[0];
-
-          return {
-            id: publicId,
-            postId,
-            type: dto.type,
-            path: m,
-          };
-        }),
-      );
+    if (dto.fileObjects) {
+      await this.uploadFileObjects(postId, dto.type, dto.fileObjects);
     }
     return Result.ok('Uploaded post successfully.', postId);
   }
@@ -75,25 +60,27 @@ export class PostService {
     if (postQuery.username) {
       andQueries.push(eq(userTable.username, postQuery.username));
     }
-    if (postQuery.tag) {
-      andQueries.push(eq(tagTable.name, postQuery.tag));
+    if (postQuery.parentId) {
+      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
     }
-    if (postQuery.groupId) {
-      andQueries.push(eq(postTable.groupId, postQuery.groupId));
-      andQueries.push(isNull(postTable.parentPostId));
-      if (postQuery.accepted !== undefined) {
-        andQueries.push(eq(postTable.groupAccepted, postQuery.accepted));
-      }
-    } else {
-      andQueries.push(isNull(postTable.groupId));
-      if (postQuery.parentId) {
-        andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
-      }
-    }
+
     if (postQuery.threadId) {
       andQueries.push(eq(postTable.threadId, postQuery.threadId));
     } else {
       andQueries.push(isNull(postTable.threadId));
+    }
+
+    if (postQuery.groupId) {
+      andQueries.push(eq(postTable.groupId, postQuery.groupId));
+      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
+      if (postQuery.accepted !== undefined) {
+        andQueries.push(eq(postTable.groupApproved, postQuery.accepted));
+      }
+      if (postQuery.tagId) {
+        andQueries.push(eq(tagTable.id, postQuery.tagId));
+      }
+    } else {
+      andQueries.push(isNull(postTable.groupId));
     }
 
     const posts = await this.getPostQuery(requesterId)
@@ -193,6 +180,7 @@ export class PostService {
         content: dto.content,
         parentPostId: postId,
         groupId: dto.groupId,
+        threadId: dto.threadId,
       })
       .$returningId();
 
@@ -202,20 +190,8 @@ export class PostService {
       .set({ replyCount: sql`${postStatsTable.replyCount} + 1` })
       .where(eq(postStatsTable.postId, postId));
 
-    if (dto.mediaPaths && dto.mediaPaths.length > 0) {
-      await this.db.insert(mediaTable).values(
-        dto.mediaPaths.map((m) => {
-          const segments = m.split('/');
-          const publicId = segments[segments.length - 1].split('.')[0];
-
-          return {
-            id: publicId,
-            postId: replyId,
-            type: dto.type,
-            path: m,
-          };
-        }),
-      );
+    if (dto.fileObjects) {
+      await this.uploadFileObjects(postId, dto.type, dto.fileObjects);
     }
     return Result.ok('Posted reply successfully.', null);
   }
@@ -234,11 +210,11 @@ export class PostService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.id, postId));
 
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
-    }
+    this.fileService.remove(
+      posts
+        .filter((e) => e.media !== null)
+        .map((e) => ({ publicId: e.media!.id, type: e.media!.type })),
+    );
 
     if (posts[0].parentPostId) {
       await this.db
@@ -256,6 +232,26 @@ export class PostService {
 
     await this.db.delete(postTable).where(eq(postTable.id, postId));
     return Result.ok('Deleted post successfully.', null);
+  }
+
+  private async uploadFileObjects(
+    postId: number,
+    type: 'image' | 'video',
+    fileObjects: Array<Express.Multer.File>,
+  ) {
+    const res = await this.fileService.upload(fileObjects);
+    const mediaPaths = res.data;
+
+    if (mediaPaths.length > 0) {
+      await this.db.insert(mediaTable).values(
+        mediaPaths.map((m) => ({
+          id: getCloudinaryIdFromUrl(m),
+          postId,
+          type: type,
+          path: m,
+        })),
+      );
+    }
   }
 
   private async getSinglePost(postId: number, requesterId: number) {
@@ -307,22 +303,24 @@ export class PostService {
       .select({
         id: postTable.id,
         owner: {
+          id: userTable.id,
           username: userTable.username,
           displayName: profileTable.displayName,
           profilePicture: profileTable.profilePicture,
         },
         content: postTable.content,
-        reaction: sql<
-          keyof typeof Reactions | null
-        >`(if(${reactionTable.userId} = ${requesterId}, ${reactionTable.type}, null))`,
-        reactionCount: sql<number>`(count(${reactionTable.userId}))`,
+        reaction: reactionTable.type,
+        reactionCount: this.db.$count(
+          reactionTable,
+          eq(reactionTable.postId, postTable.id),
+        ),
         replyCount: postStatsTable.replyCount,
         media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
         groupId: postTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
-        groupAccepted: postTable.groupAccepted,
+        groupApproved: postTable.groupApproved,
         dateCreated: postTable.dateCreated,
         dateUpdated: postTable.dateUpdated,
       })
@@ -330,7 +328,13 @@ export class PostService {
       .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
       .innerJoin(userTable, eq(userTable.id, postTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-      .leftJoin(reactionTable, eq(reactionTable.postId, postTable.id))
+      .leftJoin(
+        reactionTable,
+        and(
+          eq(reactionTable.postId, postTable.id),
+          eq(reactionTable.userId, requesterId),
+        ),
+      )
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .leftJoin(tagTable, eq(postTable.tagId, tagTable.id))
       .groupBy(

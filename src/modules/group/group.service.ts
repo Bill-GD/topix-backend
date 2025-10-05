@@ -13,9 +13,9 @@ import {
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
-import { CreateGroupPostDto } from '@/modules/group/dto/create-group-post.dto';
 import { CreateGroupThreadDto } from '@/modules/group/dto/create-group-thread.dto';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
+import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
@@ -35,8 +35,8 @@ export class GroupService {
   async create(dto: CreateGroupDto, requesterId: number) {
     let bannerUrl: string | undefined;
     if (dto.bannerFile) {
-      const res = await this.fileService.uploadSingle(dto.bannerFile);
-      bannerUrl = res.data;
+      const res = await this.fileService.upload([dto.bannerFile]);
+      bannerUrl = res.data[0];
     }
 
     const [{ id: groupId }] = await this.db
@@ -82,15 +82,9 @@ export class GroupService {
     return Result.ok('Fetched group successfully.', group);
   }
 
-  async addPost(groupId: number, ownerId: number, dto: CreateGroupPostDto) {
-    await this.postService.create(
-      ownerId,
-      dto,
-      undefined,
-      groupId,
-      dto.tagId,
-      dto.accepted,
-    );
+  async addPost(groupId: number, ownerId: number, dto: CreatePostDto) {
+    dto.groupId = groupId;
+    await this.postService.create(ownerId, dto, undefined);
     return Result.ok('Uploaded post to group successfully.', null);
   }
 
@@ -187,7 +181,7 @@ export class GroupService {
   async acceptPost(postId: number) {
     await this.db
       .update(postTable)
-      .set({ groupAccepted: true, dateUpdated: null })
+      .set({ groupApproved: true, dateUpdated: null })
       .where(eq(postTable.id, postId));
     return Result.ok('Approved member successfully.', null);
   }
@@ -201,9 +195,9 @@ export class GroupService {
         .where(eq(groupTable.id, groupId));
       if (oldBannerUrl) {
         const publicId = getCloudinaryIdFromUrl(oldBannerUrl);
-        this.fileService.removeSingle(publicId, 'image');
+        this.fileService.remove([{ publicId, type: 'image' }]);
       }
-      bannerUrl = (await this.fileService.uploadSingle(dto.bannerFile)).data;
+      bannerUrl = (await this.fileService.upload([dto.bannerFile])).data[0];
     }
 
     await this.db
@@ -231,10 +225,12 @@ export class GroupService {
       .from(groupTable)
       .where(eq(groupTable.id, groupId));
     if (bannerPicture) {
-      this.fileService.removeSingle(
-        getCloudinaryIdFromUrl(bannerPicture),
-        'image',
-      );
+      this.fileService.remove([
+        {
+          publicId: getCloudinaryIdFromUrl(bannerPicture),
+          type: 'image',
+        },
+      ]);
     }
 
     const posts = await this.db
@@ -248,14 +244,31 @@ export class GroupService {
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
       .where(eq(postTable.groupId, groupId));
 
-    for (const p of posts) {
-      if (p.media) {
-        this.fileService.removeSingle(p.media.id, p.media.type);
-      }
-    }
+    this.fileService.remove(
+      posts
+        .filter((e) => e.media !== null)
+        .map((e) => ({ publicId: e.media!.id, type: e.media!.type })),
+    );
 
     await this.db.delete(groupTable).where(eq(groupTable.id, groupId));
     return Result.ok('Deleted group successfully.', null);
+  }
+
+  async getJoinStatus(groupId: number, requesterId: number) {
+    const res = await this.db
+      .select({ status: groupMemberTable.accepted })
+      .from(groupMemberTable)
+      .where(
+        and(
+          eq(groupMemberTable.groupId, groupId),
+          eq(groupMemberTable.userId, requesterId),
+        ),
+      );
+
+    return Result.ok(
+      'Fetched group status successfully.',
+      res.length > 0 ? res[0].status : false,
+    );
   }
 
   private getGroupQuery(requesterId: number) {
@@ -264,6 +277,7 @@ export class GroupService {
         id: groupTable.id,
         name: groupTable.name,
         owner: {
+          id: userTable.id,
           username: userTable.username,
           displayName: profileTable.displayName,
           profilePicture: profileTable.profilePicture,
@@ -275,9 +289,7 @@ export class GroupService {
           eq(groupMemberTable.groupId, groupTable.id),
         ),
         description: groupTable.description,
-        status: sql<
-          'none' | 'pending' | 'joined'
-        >`(if(${groupMemberTable.accepted} is null, 'none', if(${groupMemberTable.accepted}, 'joined', 'pending')))`,
+        status: groupMemberTable.accepted,
         dateJoined: groupMemberTable.dateJoined,
         dateCreated: groupTable.dateCreated,
         dateUpdated: groupTable.dateUpdated,

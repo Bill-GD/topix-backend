@@ -1,7 +1,12 @@
 import { IsNotEmptyString, IsPositiveNumber } from '@/common/decorators';
 import { MediaTypes } from '@/common/utils/types';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
+import {
+  ApiHideProperty,
+  ApiProperty,
+  ApiPropertyOptional,
+} from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty()
@@ -12,17 +17,38 @@ export class CreatePostDto {
   @IsNotEmptyString()
   type: keyof typeof MediaTypes;
 
-  @ApiPropertyOptional({ type: 'array' })
-  @IsArray()
-  @IsOptional()
-  mediaPaths?: string[];
+  @ApiPropertyOptional({ format: 'binary' })
+  files?: string[];
+
+  @ApiHideProperty()
+  fileObjects?: Array<Express.Multer.File>;
 
   @ApiPropertyOptional()
-  @IsPositiveNumber()
   @IsOptional()
+  @IsPositiveNumber()
+  threadId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsPositiveNumber()
   groupId?: number;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsPositiveNumber()
+  tagId?: number;
+
+  @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => {
+    const strVal = (value as string).toLowerCase();
+    return {
+      true: true,
+      false: false,
+      undefined: undefined,
+    }[strVal];
+  })
   @IsBoolean()
-  accepted: boolean;
+  @IsOptional()
+  approved?: boolean;
 }
