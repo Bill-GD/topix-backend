@@ -19,7 +19,7 @@ import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, sql, SQL } from 'drizzle-orm';
+import { and, eq, SQL } from 'drizzle-orm';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 
@@ -136,7 +136,7 @@ export class GroupService {
         profilePicture: profileTable.profilePicture,
         accepted: groupMemberTable.accepted,
         dateRequested: groupMemberTable.dateRequested,
-        dateJoined: sql<Date | null>`(if(${groupMemberTable.accepted}, ${groupMemberTable.dateJoined}, null))`,
+        dateJoined: groupMemberTable.dateJoined,
       })
       .from(groupMemberTable)
       .innerJoin(userTable, eq(userTable.id, groupMemberTable.userId))
