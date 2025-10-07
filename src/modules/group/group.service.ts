@@ -19,7 +19,8 @@ import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, SQL } from 'drizzle-orm';
+import { and, eq, like, sql, SQL } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 
@@ -52,6 +53,7 @@ export class GroupService {
       groupId,
       userId: requesterId,
       accepted: true,
+      dateJoined: sql`(now())`,
     });
     return Result.ok('Created group successfully.', groupId);
   }
@@ -59,15 +61,20 @@ export class GroupService {
   async getAll(groupQuery: GroupQuery, requesterId: number) {
     const andQueries: SQL[] = [];
 
-    if (groupQuery.username) {
-      andQueries.push(eq(userTable.username, groupQuery.username));
+    if (groupQuery.ownerId) {
+      andQueries.push(eq(groupTable.ownerId, groupQuery.ownerId));
     }
     if (groupQuery.name) {
-      andQueries.push(eq(groupTable.name, groupQuery.name));
+      andQueries.push(like(groupTable.name, `%${groupQuery.name}%`));
     }
 
     const groups = await this.getGroupQuery(requesterId)
-      .where(and(...andQueries))
+      .where(
+        and(
+          ...andQueries,
+          inArray(groupTable.visibility, ['public', 'private']),
+        ),
+      )
       .limit(groupQuery.limit)
       .offset(groupQuery.offset);
 
@@ -286,7 +293,10 @@ export class GroupService {
         visibility: groupTable.visibility,
         memberCount: this.db.$count(
           groupMemberTable,
-          eq(groupMemberTable.groupId, groupTable.id),
+          and(
+            eq(groupMemberTable.groupId, groupTable.id),
+            eq(groupMemberTable.accepted, true),
+          ),
         ),
         description: groupTable.description,
         status: groupMemberTable.accepted,

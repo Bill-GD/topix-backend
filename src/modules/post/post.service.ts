@@ -13,6 +13,7 @@ import {
   threadTable,
   userTable,
 } from '@/database/schemas';
+import { visibility } from '@/database/utils';
 import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { Inject, Injectable } from '@nestjs/common';
@@ -260,19 +261,8 @@ export class PostService {
     );
 
     return {
-      id: res.id,
-      owner: res.owner,
-      parentPostId: res.parentPostId,
-      content: res.content,
-      reaction: res.reaction,
-      reactionCount: res.reactionCount,
-      threadId: res.threadId,
-      groupId: res.groupId,
-      tag: res.tag,
-      replyCount: res.replyCount,
+      ...res,
       mediaPaths: res.media ? res.media.split(';') : [],
-      dateCreated: res.dateCreated,
-      dateUpdated: res.dateUpdated,
     };
   }
 
@@ -282,19 +272,8 @@ export class PostService {
     );
 
     return res.map((r) => ({
-      id: r.id,
-      owner: r.owner,
-      parentPostId: r.parentPostId,
-      content: r.content,
-      reaction: r.reaction,
-      reactionCount: r.reactionCount,
-      replyCount: r.replyCount,
+      ...r,
       mediaPaths: r.media ? r.media.split(';') : [],
-      threadId: r.threadId,
-      groupId: r.groupId,
-      tag: r.tag,
-      dateCreated: r.dateCreated,
-      dateUpdated: r.dateUpdated,
     }));
   }
 
@@ -321,6 +300,7 @@ export class PostService {
         groupId: postTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
         groupApproved: postTable.groupApproved,
+        visibility: postTable.visibility,
         dateCreated: postTable.dateCreated,
         dateUpdated: postTable.dateUpdated,
       })

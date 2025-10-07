@@ -3,6 +3,7 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  groupTable,
   mediaTable,
   postTable,
   profileTable,
@@ -132,8 +133,8 @@ export class ThreadService {
         postCount: threadTable.postCount,
         groupId: threadTable.groupId,
         tag: { name: tagTable.name, color: tagTable.colorHex },
-        // if(`thread_follow`.user_id = 7, true, false) `following`,
         following: sql<boolean>`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
+        visibility: threadTable.visibility,
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
       })
