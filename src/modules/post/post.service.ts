@@ -13,7 +13,6 @@ import {
   threadTable,
   userTable,
 } from '@/database/schemas';
-import { visibility } from '@/database/utils';
 import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { Inject, Injectable } from '@nestjs/common';
@@ -58,30 +57,41 @@ export class PostService {
   async getAll(postQuery: PostQuery, requesterId: number) {
     const andQueries: SQL[] = [];
 
-    if (postQuery.username) {
-      andQueries.push(eq(userTable.username, postQuery.username));
-    }
-    if (postQuery.parentId) {
-      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
+    if (postQuery.groupId) {
+      andQueries.push(
+        eq(postTable.groupId, postQuery.groupId),
+        eq(postTable.groupApproved, postQuery.accepted),
+      );
+      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
+      if (postQuery.tagId) andQueries.push(eq(tagTable.id, postQuery.tagId));
+    } else {
+      andQueries.push(isNull(postTable.groupId));
     }
 
     if (postQuery.threadId) {
       andQueries.push(eq(postTable.threadId, postQuery.threadId));
+      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
     } else {
       andQueries.push(isNull(postTable.threadId));
     }
 
-    if (postQuery.groupId) {
-      andQueries.push(eq(postTable.groupId, postQuery.groupId));
-      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
-      if (postQuery.accepted !== undefined) {
-        andQueries.push(eq(postTable.groupApproved, postQuery.accepted));
-      }
-      if (postQuery.tagId) {
-        andQueries.push(eq(tagTable.id, postQuery.tagId));
-      }
-    } else {
-      andQueries.push(isNull(postTable.groupId));
+    if (postQuery.parentId) {
+      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
+    }
+
+    if (postQuery.username) {
+      andQueries.push(eq(userTable.username, postQuery.username));
+    }
+    switch (postQuery.visibility) {
+      case 'public':
+        andQueries.push(eq(postTable.visibility, 'public'));
+        break;
+      case 'private':
+        andQueries.push(inArray(postTable.visibility, ['public', 'private']));
+        break;
+      case 'hidden':
+        andQueries.push(eq(postTable.visibility, 'hidden'));
+        break;
     }
 
     const posts = await this.getPostQuery(requesterId)
@@ -182,6 +192,7 @@ export class PostService {
         parentPostId: postId,
         groupId: dto.groupId,
         threadId: dto.threadId,
+        groupApproved: dto.approved,
       })
       .$returningId();
 

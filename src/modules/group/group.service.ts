@@ -67,14 +67,16 @@ export class GroupService {
     if (groupQuery.name) {
       andQueries.push(like(groupTable.name, `%${groupQuery.name}%`));
     }
+    andQueries.push(
+      inArray(groupTable.visibility, [
+        'public',
+        'private',
+        ...(groupQuery.hidden ? ['hidden' as const] : []),
+      ]),
+    );
 
     const groups = await this.getGroupQuery(requesterId)
-      .where(
-        and(
-          ...andQueries,
-          inArray(groupTable.visibility, ['public', 'private']),
-        ),
-      )
+      .where(and(...andQueries))
       .limit(groupQuery.limit)
       .offset(groupQuery.offset);
 

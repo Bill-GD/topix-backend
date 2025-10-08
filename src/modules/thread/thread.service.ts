@@ -3,7 +3,6 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
-  groupTable,
   mediaTable,
   postTable,
   profileTable,
@@ -19,6 +18,7 @@ import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 
 @Injectable()
 export class ThreadService {
@@ -31,16 +31,29 @@ export class ThreadService {
   async getAll(threadQuery: ThreadQuery, requesterId: number) {
     const andQueries: SQL[] = [];
 
+    if (threadQuery.groupId) {
+      andQueries.push(eq(threadTable.groupId, threadQuery.groupId));
+    } else {
+      andQueries.push(isNull(threadTable.groupId));
+    }
+
     if (threadQuery.username) {
       andQueries.push(eq(userTable.username, threadQuery.username));
     }
     if (threadQuery.tagId) {
       andQueries.push(eq(tagTable.id, threadQuery.tagId));
     }
-    if (threadQuery.groupId) {
-      andQueries.push(eq(threadTable.groupId, threadQuery.groupId));
-    } else {
-      andQueries.push(isNull(threadTable.groupId));
+
+    switch (threadQuery.visibility) {
+      case 'public':
+        andQueries.push(eq(threadTable.visibility, 'public'));
+        break;
+      case 'private':
+        andQueries.push(inArray(threadTable.visibility, ['public', 'private']));
+        break;
+      case 'hidden':
+        andQueries.push(eq(threadTable.visibility, 'hidden'));
+        break;
     }
 
     const threads = await this.getThreadQuery(requesterId)
