@@ -15,6 +15,7 @@ import {
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
+import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
@@ -41,6 +42,7 @@ export class PostService {
         groupId: dto.groupId,
         tagId: dto.tagId,
         groupApproved: dto.approved,
+        visibility: dto.visibility,
       })
       .$returningId();
 
@@ -143,9 +145,13 @@ export class PostService {
     });
   }
 
-  // async update(postId: number, dto: UpdatePostDto) {
-  //   return Result.ok('Post updated successfully', null);
-  // }
+  async update(postId: number, dto: UpdatePostDto) {
+    await this.db
+      .update(postTable)
+      .set({ visibility: dto.visibility })
+      .where(eq(postTable.id, postId));
+    return Result.ok('Post updated successfully', null);
+  }
 
   async updateReaction(postId: number, userId: number, dto: ReactDto) {
     const res = await this.db.$count(

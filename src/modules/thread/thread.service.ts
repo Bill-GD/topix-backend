@@ -73,19 +73,15 @@ export class ThreadService {
     return Result.ok('Fetched thread successfully.', thread);
   }
 
-  async create(
-    dto: CreateThreadDto,
-    requesterId: number,
-    groupId?: number,
-    tagId?: number,
-  ) {
+  async create(dto: CreateThreadDto, requesterId: number) {
     const [{ id: threadId }] = await this.db
       .insert(threadTable)
       .values({
         ownerId: requesterId,
         title: dto.title,
-        groupId: groupId,
-        tagId: tagId,
+        groupId: dto.groupId,
+        tagId: dto.tagId,
+        visibility: dto.visibility,
       })
       .$returningId();
     return Result.ok('Created thread successfully.', threadId);
@@ -105,7 +101,7 @@ export class ThreadService {
   async update(threadId: number, dto: UpdateThreadDto) {
     await this.db
       .update(threadTable)
-      .set({ title: dto.title })
+      .set({ title: dto.title, visibility: dto.visibility })
       .where(eq(threadTable.id, threadId));
     return Result.ok('Updated thread successfully.', null);
   }

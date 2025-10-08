@@ -1,4 +1,8 @@
-import { IsNotEmptyString, IsPositiveNumber } from '@/common/decorators';
+import {
+  IsNotEmptyString,
+  IsOptionalString,
+  IsPositiveNumber,
+} from '@/common/decorators';
 import { MediaTypes } from '@/common/utils/types';
 import {
   ApiHideProperty,
@@ -51,4 +55,8 @@ export class CreatePostDto {
   @IsBoolean()
   @IsOptional()
   approved?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptionalString()
+  visibility?: 'public' | 'private' | 'hidden' = 'public';
 }

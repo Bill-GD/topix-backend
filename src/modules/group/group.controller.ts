@@ -11,9 +11,9 @@ import { GroupQuery, MemberQuery } from '@/common/queries';
 import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { getReadableSize } from '@/common/utils/helpers';
-import { CreateGroupThreadDto } from '@/modules/group/dto/create-group-thread.dto';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
+import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import {
   Body,
   Controller,
@@ -151,7 +151,7 @@ export class GroupController {
   async addThread(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
-    @Body() dto: CreateGroupThreadDto,
+    @Body() dto: CreateThreadDto,
   ) {
     const res = await this.groupService.addThread(groupId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
