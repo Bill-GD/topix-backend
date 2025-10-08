@@ -2,7 +2,8 @@ import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
 import {
   AuthenticatedGuard,
   GetRequesterGuard,
-  PostExistGuard, PostOwnerGuard,
+  PostExistGuard,
+  PostOwnerGuard,
   PostOwnerOrAdminGuard,
 } from '@/common/guards';
 import { FileSizeValidatorPipe } from '@/common/pipes';

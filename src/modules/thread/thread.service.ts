@@ -3,6 +3,8 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  groupMemberTable,
+  groupTable,
   mediaTable,
   postTable,
   profileTable,
@@ -141,6 +143,9 @@ export class ThreadService {
         },
         postCount: threadTable.postCount,
         groupId: threadTable.groupId,
+        groupName: groupTable.name,
+        groupVisibility: groupTable.visibility,
+        joinedGroup: groupMemberTable.accepted,
         tag: { name: tagTable.name, color: tagTable.colorHex },
         following: sql<boolean>`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
         visibility: threadTable.visibility,
@@ -150,9 +155,17 @@ export class ThreadService {
       .from(threadTable)
       .innerJoin(userTable, eq(userTable.id, threadTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .leftJoin(groupTable, eq(threadTable.groupId, groupTable.id))
       .leftJoin(
         threadFollowTable,
         eq(threadFollowTable.threadId, threadTable.id),
+      )
+      .leftJoin(
+        groupMemberTable,
+        and(
+          eq(groupMemberTable.groupId, groupTable.id),
+          eq(groupMemberTable.userId, requesterId),
+        ),
       )
       .leftJoin(tagTable, eq(threadTable.tagId, tagTable.id))
       .$dynamic();

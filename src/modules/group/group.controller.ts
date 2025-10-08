@@ -85,6 +85,7 @@ export class GroupController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
+  // unused
   @Get(':id/join-status')
   async getJoinStatus(
     @Param('id', ParseIntPipe) groupId: number,

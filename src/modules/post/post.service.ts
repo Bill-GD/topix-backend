@@ -4,6 +4,8 @@ import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  groupMemberTable,
+  groupTable,
   mediaTable,
   postStatsTable,
   postTable,
@@ -314,7 +316,13 @@ export class PostService {
         media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
+        threadTitle: threadTable.title,
+        threadOwnerId: threadTable.ownerId,
+        threadVisibility: threadTable.visibility,
         groupId: postTable.groupId,
+        groupName: groupTable.name,
+        groupVisibility: groupTable.visibility,
+        joinedGroup: groupMemberTable.accepted,
         tag: { name: tagTable.name, color: tagTable.colorHex },
         groupApproved: postTable.groupApproved,
         visibility: postTable.visibility,
@@ -325,11 +333,20 @@ export class PostService {
       .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
       .innerJoin(userTable, eq(userTable.id, postTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .leftJoin(threadTable, eq(postTable.threadId, threadTable.id))
+      .leftJoin(groupTable, eq(postTable.groupId, groupTable.id))
       .leftJoin(
         reactionTable,
         and(
           eq(reactionTable.postId, postTable.id),
           eq(reactionTable.userId, requesterId),
+        ),
+      )
+      .leftJoin(
+        groupMemberTable,
+        and(
+          eq(groupMemberTable.groupId, groupTable.id),
+          eq(groupMemberTable.userId, requesterId),
         ),
       )
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))
