@@ -68,13 +68,12 @@ export class GroupService {
     if (groupQuery.name) {
       andQueries.push(like(groupTable.name, `%${groupQuery.name}%`));
     }
-    andQueries.push(
-      inArray(groupTable.visibility, [
-        'public',
-        'private',
-        ...(groupQuery.hidden ? ['hidden' as const] : []),
-      ]),
-    );
+
+    if (groupQuery.hidden) {
+      andQueries.push(eq(groupTable.visibility, 'hidden'));
+    } else {
+      andQueries.push(inArray(groupTable.visibility, ['public', 'private']));
+    }
 
     const groups = await this.getGroupQuery(requesterId)
       .where(and(...andQueries))
