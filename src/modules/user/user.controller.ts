@@ -22,7 +22,9 @@ import {
   HttpStatus,
   Param,
   ParseFilePipe,
+  ParseIntPipe,
   Patch,
+  Post,
   Query,
   UploadedFile,
   UseGuards,
@@ -54,15 +56,34 @@ export class UserController {
   }
 
   @Get(':username')
-  @UseGuards(UserExistGuard('username'))
-  async getUser(@Param('username') username: string) {
-    const user = await this.userService.getUserByUsername(username);
+  @UseGuards(UserExistGuard('username'), GetRequesterGuard)
+  async getUser(
+    @Param('username') username: string,
+    @RequesterID() requesterId: number,
+  ) {
+    const user = await this.userService.getUserByUsername(
+      username,
+      requesterId,
+    );
 
     return ControllerResponse.ok(
       'Fetched user successfully.',
       user,
       HttpStatus.OK,
     );
+  }
+
+  @Post(':id/follow')
+  @UseGuards(UserExistGuard('id'), GetRequesterGuard)
+  async followUser(
+    @Param('id', ParseIntPipe) userId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.userService.followUser(userId, requesterId);
+    if (!res.success) {
+      return ControllerResponse.fail(new ConflictException(res.message));
+    }
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Patch('me')
@@ -93,6 +114,16 @@ export class UserController {
     }
 
     return ControllerResponse.ok(res.message, null, HttpStatus.OK);
+  }
+
+  @Delete(':id/follow')
+  @UseGuards(UserExistGuard('id'), GetRequesterGuard)
+  async unfollowUser(
+    @Param('id', ParseIntPipe) userId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.userService.unfollowUser(userId, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Delete(':username')
