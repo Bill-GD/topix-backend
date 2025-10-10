@@ -1,4 +1,8 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreatePostDto } from './create-post.dto';
+import { IsOptionalString } from '@/common/decorators';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class UpdatePostDto extends PartialType(CreatePostDto) {}
+export class UpdatePostDto {
+  @ApiPropertyOptional()
+  @IsOptionalString()
+  visibility?: 'public' | 'private' | 'hidden' = 'public';
+}

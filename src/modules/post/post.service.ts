@@ -4,6 +4,8 @@ import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  groupMemberTable,
+  groupTable,
   mediaTable,
   postStatsTable,
   postTable,
@@ -15,6 +17,7 @@ import {
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
+import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
@@ -41,6 +44,7 @@ export class PostService {
         groupId: dto.groupId,
         tagId: dto.tagId,
         groupApproved: dto.approved,
+        visibility: dto.visibility,
       })
       .$returningId();
 
@@ -57,30 +61,41 @@ export class PostService {
   async getAll(postQuery: PostQuery, requesterId: number) {
     const andQueries: SQL[] = [];
 
-    if (postQuery.username) {
-      andQueries.push(eq(userTable.username, postQuery.username));
-    }
-    if (postQuery.parentId) {
-      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
+    if (postQuery.groupId) {
+      andQueries.push(
+        eq(postTable.groupId, postQuery.groupId),
+        eq(postTable.groupApproved, postQuery.accepted),
+      );
+      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
+      if (postQuery.tagId) andQueries.push(eq(tagTable.id, postQuery.tagId));
+    } else {
+      andQueries.push(isNull(postTable.groupId));
     }
 
     if (postQuery.threadId) {
       andQueries.push(eq(postTable.threadId, postQuery.threadId));
+      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
     } else {
       andQueries.push(isNull(postTable.threadId));
     }
 
-    if (postQuery.groupId) {
-      andQueries.push(eq(postTable.groupId, postQuery.groupId));
-      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
-      if (postQuery.accepted !== undefined) {
-        andQueries.push(eq(postTable.groupApproved, postQuery.accepted));
-      }
-      if (postQuery.tagId) {
-        andQueries.push(eq(tagTable.id, postQuery.tagId));
-      }
-    } else {
-      andQueries.push(isNull(postTable.groupId));
+    if (postQuery.parentId) {
+      andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
+    }
+
+    if (postQuery.username) {
+      andQueries.push(eq(userTable.username, postQuery.username));
+    }
+    switch (postQuery.visibility) {
+      case 'public':
+        andQueries.push(eq(postTable.visibility, 'public'));
+        break;
+      case 'private':
+        andQueries.push(inArray(postTable.visibility, ['public', 'private']));
+        break;
+      case 'hidden':
+        andQueries.push(eq(postTable.visibility, 'hidden'));
+        break;
     }
 
     const posts = await this.getPostQuery(requesterId)
@@ -132,9 +147,13 @@ export class PostService {
     });
   }
 
-  // async update(postId: number, dto: UpdatePostDto) {
-  //   return Result.ok('Post updated successfully', null);
-  // }
+  async update(postId: number, dto: UpdatePostDto) {
+    await this.db
+      .update(postTable)
+      .set({ visibility: dto.visibility })
+      .where(eq(postTable.id, postId));
+    return Result.ok('Post updated successfully', null);
+  }
 
   async updateReaction(postId: number, userId: number, dto: ReactDto) {
     const res = await this.db.$count(
@@ -181,6 +200,7 @@ export class PostService {
         parentPostId: postId,
         groupId: dto.groupId,
         threadId: dto.threadId,
+        groupApproved: dto.approved,
       })
       .$returningId();
 
@@ -260,19 +280,8 @@ export class PostService {
     );
 
     return {
-      id: res.id,
-      owner: res.owner,
-      parentPostId: res.parentPostId,
-      content: res.content,
-      reaction: res.reaction,
-      reactionCount: res.reactionCount,
-      threadId: res.threadId,
-      groupId: res.groupId,
-      tag: res.tag,
-      replyCount: res.replyCount,
+      ...res,
       mediaPaths: res.media ? res.media.split(';') : [],
-      dateCreated: res.dateCreated,
-      dateUpdated: res.dateUpdated,
     };
   }
 
@@ -282,19 +291,8 @@ export class PostService {
     );
 
     return res.map((r) => ({
-      id: r.id,
-      owner: r.owner,
-      parentPostId: r.parentPostId,
-      content: r.content,
-      reaction: r.reaction,
-      reactionCount: r.reactionCount,
-      replyCount: r.replyCount,
+      ...r,
       mediaPaths: r.media ? r.media.split(';') : [],
-      threadId: r.threadId,
-      groupId: r.groupId,
-      tag: r.tag,
-      dateCreated: r.dateCreated,
-      dateUpdated: r.dateUpdated,
     }));
   }
 
@@ -318,9 +316,16 @@ export class PostService {
         media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
+        threadTitle: threadTable.title,
+        threadOwnerId: threadTable.ownerId,
+        threadVisibility: threadTable.visibility,
         groupId: postTable.groupId,
+        groupName: groupTable.name,
+        groupVisibility: groupTable.visibility,
+        joinedGroup: groupMemberTable.accepted,
         tag: { name: tagTable.name, color: tagTable.colorHex },
         groupApproved: postTable.groupApproved,
+        visibility: postTable.visibility,
         dateCreated: postTable.dateCreated,
         dateUpdated: postTable.dateUpdated,
       })
@@ -328,11 +333,20 @@ export class PostService {
       .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
       .innerJoin(userTable, eq(userTable.id, postTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .leftJoin(threadTable, eq(postTable.threadId, threadTable.id))
+      .leftJoin(groupTable, eq(postTable.groupId, groupTable.id))
       .leftJoin(
         reactionTable,
         and(
           eq(reactionTable.postId, postTable.id),
           eq(reactionTable.userId, requesterId),
+        ),
+      )
+      .leftJoin(
+        groupMemberTable,
+        and(
+          eq(groupMemberTable.groupId, groupTable.id),
+          eq(groupMemberTable.userId, requesterId),
         ),
       )
       .leftJoin(mediaTable, eq(mediaTable.postId, postTable.id))

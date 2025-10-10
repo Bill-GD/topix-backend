@@ -1,4 +1,4 @@
-import { IsNotEmptyString } from '@/common/decorators';
+import { IsNotEmptyString, IsOptionalString } from '@/common/decorators';
 import {
   ApiHideProperty,
   ApiProperty,
@@ -17,4 +17,8 @@ export class CreateGroupDto {
 
   @ApiHideProperty()
   bannerFile?: Express.Multer.File;
+
+  @ApiPropertyOptional()
+  @IsOptionalString()
+  visibility?: 'public' | 'private' | 'hidden' = 'public';
 }

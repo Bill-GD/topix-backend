@@ -3,11 +3,13 @@ import {
   AuthenticatedGuard,
   GetRequesterGuard,
   PostExistGuard,
+  PostOwnerGuard,
   PostOwnerOrAdminGuard,
 } from '@/common/guards';
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { PostQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import {
   Body,
   Controller,
@@ -76,15 +78,15 @@ export class PostController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
-  // @Patch(':id')
-  // @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerGuard)
-  // async update(
-  //   @Param('id', ParseIntPipe) postId: number,
-  //   @Body() dto: UpdatePostDto,
-  // ) {
-  //   const res = await this.postService.update(postId, dto);
-  //   return ControllerResponse.ok(res.message, null, HttpStatus.OK);
-  // }
+  @Patch(':id')
+  @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerGuard)
+  async update(
+    @Param('id', ParseIntPipe) postId: number,
+    @Body() dto: UpdatePostDto,
+  ) {
+    const res = await this.postService.update(postId, dto);
+    return ControllerResponse.ok(res.message, null, HttpStatus.OK);
+  }
 
   @Delete(':id')
   @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerOrAdminGuard)

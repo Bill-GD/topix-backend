@@ -3,7 +3,6 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
-  groupMemberTable,
   mediaTable,
   postTable,
   profileTable,
@@ -12,7 +11,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, SQL } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class UserService {

@@ -13,13 +13,14 @@ import {
   userTable,
 } from '@/database/schemas';
 import { FileService } from '@/modules/file/file.service';
-import { CreateGroupThreadDto } from '@/modules/group/dto/create-group-thread.dto';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { PostService } from '@/modules/post/post.service';
+import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { ThreadService } from '@/modules/thread/thread.service';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, SQL } from 'drizzle-orm';
+import { and, eq, like, sql, SQL } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 
@@ -45,6 +46,7 @@ export class GroupService {
         ownerId: requesterId,
         name: dto.name,
         bannerPicture: bannerUrl,
+        visibility: dto.visibility,
       })
       .$returningId();
 
@@ -52,6 +54,7 @@ export class GroupService {
       groupId,
       userId: requesterId,
       accepted: true,
+      dateJoined: sql`(now())`,
     });
     return Result.ok('Created group successfully.', groupId);
   }
@@ -59,11 +62,17 @@ export class GroupService {
   async getAll(groupQuery: GroupQuery, requesterId: number) {
     const andQueries: SQL[] = [];
 
-    if (groupQuery.username) {
-      andQueries.push(eq(userTable.username, groupQuery.username));
+    if (groupQuery.ownerId) {
+      andQueries.push(eq(groupTable.ownerId, groupQuery.ownerId));
     }
     if (groupQuery.name) {
-      andQueries.push(eq(groupTable.name, groupQuery.name));
+      andQueries.push(like(groupTable.name, `%${groupQuery.name}%`));
+    }
+
+    if (groupQuery.hidden) {
+      andQueries.push(eq(groupTable.visibility, 'hidden'));
+    } else {
+      andQueries.push(inArray(groupTable.visibility, ['public', 'private']));
     }
 
     const groups = await this.getGroupQuery(requesterId)
@@ -88,8 +97,8 @@ export class GroupService {
     return Result.ok('Uploaded post to group successfully.', null);
   }
 
-  async addThread(groupId: number, ownerId: number, dto: CreateGroupThreadDto) {
-    await this.threadService.create(dto, ownerId, groupId, dto.tagId);
+  async addThread(groupId: number, ownerId: number, dto: CreateThreadDto) {
+    await this.threadService.create({ ...dto, groupId }, ownerId);
     return Result.ok('Added thread to group successfully.', null);
   }
 
@@ -206,6 +215,7 @@ export class GroupService {
         name: dto.name,
         bannerPicture: bannerUrl,
         description: dto.description,
+        visibility: dto.visibility,
       })
       .where(eq(groupTable.id, groupId));
     return Result.ok('Updated group successfully.', null);
@@ -286,7 +296,10 @@ export class GroupService {
         visibility: groupTable.visibility,
         memberCount: this.db.$count(
           groupMemberTable,
-          eq(groupMemberTable.groupId, groupTable.id),
+          and(
+            eq(groupMemberTable.groupId, groupTable.id),
+            eq(groupMemberTable.accepted, true),
+          ),
         ),
         description: groupTable.description,
         status: groupMemberTable.accepted,

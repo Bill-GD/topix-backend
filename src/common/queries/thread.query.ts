@@ -17,4 +17,8 @@ export class ThreadQuery extends CommonQuery {
   @IsPositiveNumber()
   @IsOptional()
   tagId?: number;
+
+  @ApiPropertyOptional()
+  @IsOptionalString()
+  visibility: 'public' | 'private' | 'hidden' = 'public';
 }
