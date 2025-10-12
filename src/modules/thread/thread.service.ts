@@ -100,6 +100,30 @@ export class ThreadService {
     return Result.ok('Added post to thread successfully.', null);
   }
 
+  async followThread(threadId: number, requesterId: number) {
+    try {
+      await this.db.insert(threadFollowTable).values({
+        threadId: threadId,
+        userId: requesterId,
+      });
+    } catch (e) {
+      return Result.fail('Thread already followed.');
+    }
+    return Result.ok('Followed thread successfully', null);
+  }
+
+  async unfollowThread(threadId: number, requesterId: number) {
+    await this.db
+      .delete(threadFollowTable)
+      .where(
+        and(
+          eq(threadFollowTable.threadId, threadId),
+          eq(threadFollowTable.userId, requesterId),
+        ),
+      );
+    return Result.ok('Unfollowed thread successfully', null);
+  }
+
   async update(threadId: number, dto: UpdateThreadDto) {
     await this.db
       .update(threadTable)
@@ -147,7 +171,7 @@ export class ThreadService {
         groupVisibility: groupTable.visibility,
         joinedGroup: groupMemberTable.accepted,
         tag: { name: tagTable.name, color: tagTable.colorHex },
-        following: sql<boolean>`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
+        followed: sql<boolean>`(if(${threadFollowTable.userId} = ${requesterId}, true, false))`,
         visibility: threadTable.visibility,
         dateCreated: threadTable.dateCreated,
         dateUpdated: threadTable.dateUpdated,
