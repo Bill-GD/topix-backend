@@ -68,6 +68,16 @@ export class PostController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
+  @Get('following')
+  @UseGuards(GetRequesterGuard)
+  async getAllFollowing(
+    @Query() query: PostQuery,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.postService.getAllFollowing(query, requesterId);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   @Get(':id')
   @UseGuards(PostExistGuard, GetRequesterGuard)
   async getOne(
