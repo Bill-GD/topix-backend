@@ -9,7 +9,7 @@ export class CommonQuery {
   @ApiPropertyOptional({ type: 'integer', example: 1 })
   @IsInt()
   @IsOptional()
-  page?: number;
+  page: number = 1;
 
   @ApiPropertyOptional({
     type: 'integer',
@@ -18,13 +18,13 @@ export class CommonQuery {
   })
   @IsInt()
   @IsOptional()
-  size?: number;
+  size: number = config.queryLimit;
 
   get offset() {
-    return this.page && this.size ? (this.page - 1) * this.size : 0;
+    return (this.page - 1) * this.size;
   }
 
   get limit() {
-    return this.size || config.queryLimit;
+    return this.size;
   }
 }
