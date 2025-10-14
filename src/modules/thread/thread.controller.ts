@@ -13,6 +13,7 @@ import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   FileTypeValidator,
@@ -91,6 +92,19 @@ export class ThreadController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
+  @Post(':id/follow')
+  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  async followThread(
+    @Param('id', ParseIntPipe) threadId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.threadService.followThread(threadId, requesterId);
+    if (!res.success) {
+      return ControllerResponse.fail(new ConflictException(res.message));
+    }
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   @Patch(':id')
   @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
   async update(
@@ -98,6 +112,19 @@ export class ThreadController {
     @Body() dto: UpdateThreadDto,
   ) {
     const res = await this.threadService.update(threadId, dto);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Delete(':id/follow')
+  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  async unfollowThread(
+    @Param('id', ParseIntPipe) threadId: number,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.threadService.unfollowThread(threadId, requesterId);
+    if (!res.success) {
+      return ControllerResponse.fail(new ConflictException(res.message));
+    }
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

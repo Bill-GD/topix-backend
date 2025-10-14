@@ -3,6 +3,7 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  followTable,
   mediaTable,
   postTable,
   profileTable,
@@ -11,7 +12,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class UserService {
@@ -53,7 +54,7 @@ export class UserService {
     return user;
   }
 
-  async getUserByUsername(username: string) {
+  async getUserByUsername(username: string, requesterId: number) {
     const [user] = await this.db
       .select({
         id: userTable.id,
@@ -63,13 +64,45 @@ export class UserService {
         profilePicture: profileTable.profilePicture,
         followerCount: profileTable.followerCount,
         followingCount: profileTable.followingCount,
+        followed: sql<boolean>`(not isnull(${followTable.userId}))`,
         role: userTable.role,
       })
       .from(userTable)
       .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
+      .leftJoin(
+        followTable,
+        and(
+          eq(followTable.followedId, userTable.id),
+          eq(followTable.userId, requesterId),
+        ),
+      )
       .where(eq(userTable.username, username));
 
     return user;
+  }
+
+  async followUser(userId: number, requesterId: number) {
+    try {
+      await this.db.insert(followTable).values({
+        userId: requesterId,
+        followedId: userId,
+      });
+    } catch (e) {
+      return Result.fail('User already followed.');
+    }
+    return Result.ok('Followed user successfully', null);
+  }
+
+  async unfollowUser(userId: number, requesterId: number) {
+    await this.db
+      .delete(followTable)
+      .where(
+        and(
+          eq(followTable.followedId, userId),
+          eq(followTable.userId, requesterId),
+        ),
+      );
+    return Result.ok('Unfollowed user successfully', null);
   }
 
   async updateProfileInfo(
@@ -113,7 +146,10 @@ export class UserService {
   }
 
   async deleteUser(username: string): Promise<Result<null>> {
-    const user = await this.getUserByUsername(username);
+    const [user] = await this.db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.username, username));
     if (user.role === 'admin') {
       return Result.fail(`Admin account can't be deleted.`);
     }

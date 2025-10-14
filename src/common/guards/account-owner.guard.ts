@@ -1,14 +1,17 @@
-import { JwtUserPayload } from '@/common/utils/types';
-import { UserService } from '@/modules/user/user.service';
+import { DatabaseProviderKey } from '@/common/utils/constants';
+import { DBType, JwtUserPayload } from '@/common/utils/types';
+import { userTable } from '@/database/schemas';
 import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
   mixin,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JsonWebTokenError, JwtService } from '@nestjs/jwt';
+import { eq } from 'drizzle-orm';
 import { Request } from 'express';
 
 export function AccountOwnerGuard(allowAdmin: boolean) {
@@ -16,7 +19,7 @@ export function AccountOwnerGuard(allowAdmin: boolean) {
   class AccountOwnerMixin implements CanActivate {
     constructor(
       readonly jwt: JwtService,
-      readonly userService: UserService,
+      @Inject(DatabaseProviderKey) readonly db: DBType,
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -24,9 +27,10 @@ export function AccountOwnerGuard(allowAdmin: boolean) {
 
       // should have authenticated guard before this
       const authToken = req.headers.authorization!.split(' ')[1];
-      const { id: requestedUser } = await this.userService.getUserByUsername(
-        req.params.username,
-      );
+      const [{ id: requestedUser }] = await this.db
+        .select({ id: userTable.id })
+        .from(userTable)
+        .where(eq(userTable.username, req.params.username));
       let user: JwtUserPayload;
 
       try {
