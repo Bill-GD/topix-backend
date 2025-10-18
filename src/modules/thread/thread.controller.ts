@@ -8,6 +8,7 @@ import {
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { addPaginateHeader } from '@/common/utils/helpers';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
@@ -25,9 +26,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ThreadService } from './thread.service';
 
 @Controller('thread')
@@ -39,10 +42,12 @@ export class ThreadController {
   @Get()
   @UseGuards(GetRequesterGuard)
   async getAll(
+    @Res({ passthrough: true }) response: Response,
     @Query() query: ThreadQuery,
     @RequesterID() requesterId: number,
   ) {
     const res = await this.threadService.getAll(query, requesterId);
+    addPaginateHeader(response, res.data.length < query.size);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

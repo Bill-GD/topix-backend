@@ -1,3 +1,4 @@
+import { Response } from 'express';
 import * as path from 'node:path';
 
 export function getDistPath(): string {
@@ -21,4 +22,9 @@ export function getReadableSize(byte: number): string {
     postfixIndex++;
   }
   return `${size.toPrecision(2)} ${postfix[postfixIndex]}`;
+}
+
+export function addPaginateHeader(res: Response, value: boolean) {
+  res.setHeader('Access-Control-Expose-Headers', 'X-End-Of-List');
+  res.setHeader('X-End-Of-List', `${value}`);
 }
