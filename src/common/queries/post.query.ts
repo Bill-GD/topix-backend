@@ -6,13 +6,20 @@ import { IsBoolean, IsOptional } from 'class-validator';
 
 export class PostQuery extends CommonQuery {
   @ApiPropertyOptional()
-  @IsOptionalString()
-  username?: string;
-
-  @ApiPropertyOptional()
   @IsPositiveNumber()
   @IsOptional()
-  parentId?: number;
+  userId?: number;
+
+  @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => {
+    const strVal = (value as string).toLowerCase();
+    if (strVal === 'null') return null;
+    return Number(value);
+  })
+  @IsPositiveNumber()
+  @IsOptional()
+  parentId?: number | null;
 
   @ApiPropertyOptional()
   @Type(() => String)
@@ -26,9 +33,15 @@ export class PostQuery extends CommonQuery {
   threadId?: number | null;
 
   @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => {
+    const strVal = (value as string).toLowerCase();
+    if (strVal === 'null') return null;
+    return Number(value);
+  })
   @IsPositiveNumber()
   @IsOptional()
-  groupId?: number;
+  groupId?: number | null;
 
   @ApiPropertyOptional()
   @IsPositiveNumber()
@@ -36,18 +49,9 @@ export class PostQuery extends CommonQuery {
   tagId?: number;
 
   @ApiPropertyOptional()
-  @Type(() => String)
-  @Transform(({ value }) => {
-    const strVal = (value as string).toLowerCase();
-    return {
-      true: true,
-      false: false,
-      undefined: true,
-    }[strVal];
-  })
   @IsBoolean()
   @IsOptional()
-  accepted: boolean = true;
+  approved?: boolean;
 
   @ApiPropertyOptional()
   @IsOptionalString()

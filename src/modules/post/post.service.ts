@@ -21,7 +21,7 @@ import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, or, SQL, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, or, SQL, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
@@ -64,28 +64,55 @@ export class PostService {
     if (postQuery.groupId) {
       andQueries.push(
         eq(postTable.groupId, postQuery.groupId),
-        eq(postTable.groupApproved, postQuery.accepted),
+        isNull(postTable.threadId),
+        isNull(postTable.parentPostId),
       );
-      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
+      if (postQuery.approved !== undefined) {
+        andQueries.push(eq(postTable.groupApproved, postQuery.approved));
+      }
       if (postQuery.tagId) andQueries.push(eq(tagTable.id, postQuery.tagId));
-    } else {
+    } else if (postQuery.groupId === null) {
       andQueries.push(isNull(postTable.groupId));
     }
 
     if (postQuery.threadId) {
-      andQueries.push(eq(postTable.threadId, postQuery.threadId));
-      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
+      andQueries.push(
+        eq(postTable.threadId, postQuery.threadId),
+        isNull(postTable.parentPostId),
+      );
     } else if (postQuery.threadId === null) {
       andQueries.push(isNull(postTable.threadId));
+    }
+
+    // not specified -> fetching from feed
+    if (postQuery.threadId === undefined && postQuery.groupId === undefined) {
+      andQueries.push(
+        <SQL<unknown>>(
+          or(
+            and(
+              isNull(postTable.groupId),
+              or(
+                isNull(postTable.threadId),
+                eq(threadTable.visibility, 'public'),
+              ),
+            ),
+            and(
+              isNotNull(postTable.groupId),
+              eq(groupMemberTable.accepted, true),
+            ),
+          )
+        ),
+      );
     }
 
     if (postQuery.parentId) {
       andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
     }
 
-    if (postQuery.username) {
-      andQueries.push(eq(userTable.username, postQuery.username));
+    if (postQuery.userId) {
+      andQueries.push(eq(postTable.ownerId, postQuery.userId));
     }
+
     switch (postQuery.visibility) {
       case 'public':
         andQueries.push(eq(postTable.visibility, 'public'));
@@ -354,7 +381,7 @@ export class PostService {
     }));
   }
 
-  private getPostQuery(requesterId: number, getFollowing: boolean = false) {
+  private getPostQuery(requesterId: number) {
     const reactCount = this.db
       .select({
         postId: reactionTable.postId,
