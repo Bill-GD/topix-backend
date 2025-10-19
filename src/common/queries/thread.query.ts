@@ -5,8 +5,9 @@ import { IsOptional } from 'class-validator';
 
 export class ThreadQuery extends CommonQuery {
   @ApiPropertyOptional()
-  @IsOptionalString()
-  username?: string;
+  @IsPositiveNumber()
+  @IsOptional()
+  userId?: number;
 
   @ApiPropertyOptional()
   @IsPositiveNumber()

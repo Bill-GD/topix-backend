@@ -62,8 +62,8 @@ export class GroupService {
   async getAll(groupQuery: GroupQuery, requesterId: number) {
     const andQueries: SQL[] = [];
 
-    if (groupQuery.ownerId) {
-      andQueries.push(eq(groupTable.ownerId, groupQuery.ownerId));
+    if (groupQuery.userId) {
+      andQueries.push(eq(groupTable.ownerId, groupQuery.userId));
     }
     if (groupQuery.name) {
       andQueries.push(like(groupTable.name, `%${groupQuery.name}%`));
