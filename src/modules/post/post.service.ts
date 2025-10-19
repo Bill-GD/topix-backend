@@ -83,7 +83,7 @@ export class PostService {
     if (postQuery.threadId) {
       andQueries.push(eq(postTable.threadId, postQuery.threadId));
       if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
-    } else {
+    } else if (postQuery.threadId === null) {
       andQueries.push(isNull(postTable.threadId));
     }
 

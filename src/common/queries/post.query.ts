@@ -15,9 +15,15 @@ export class PostQuery extends CommonQuery {
   parentId?: number;
 
   @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => {
+    const strVal = (value as string).toLowerCase();
+    if (strVal === 'null') return null;
+    return Number(value);
+  })
   @IsPositiveNumber()
   @IsOptional()
-  threadId?: number;
+  threadId?: number | null;
 
   @ApiPropertyOptional()
   @IsPositiveNumber()
