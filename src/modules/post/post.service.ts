@@ -1,4 +1,5 @@
 import { PostQuery } from '@/common/queries';
+import { CommonQuery } from '@/common/queries/common.query';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
@@ -20,16 +21,7 @@ import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  isNull,
-  or,
-  SQL,
-  sql,
-} from 'drizzle-orm';
+import { and, desc, eq, isNull, or, SQL, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
@@ -138,8 +130,35 @@ export class PostService {
     );
   }
 
-  async getAllFollowing(postQuery: PostQuery, requesterId: number) {
-    const posts = await this.getPostQuery(requesterId, true)
+  async getAllFollowing(postQuery: CommonQuery, requesterId: number) {
+    const followedUserIds = this.db
+      .select({ id: followTable.followedId })
+      .from(followTable)
+      .where(eq(followTable.userId, requesterId));
+
+    const followedThreadIds = this.db
+      .select({ id: threadFollowTable.threadId })
+      .from(threadFollowTable)
+      .where(eq(threadFollowTable.userId, requesterId));
+
+    const posts = await this.getPostQuery(requesterId)
+      .where(
+        and(
+          isNull(postTable.groupId),
+          or(
+            and(
+              inArray(postTable.ownerId, followedUserIds),
+              isNull(postTable.threadId),
+              eq(postTable.visibility, 'public'),
+            ),
+            and(
+              inArray(postTable.threadId, followedThreadIds),
+              isNull(postTable.parentPostId),
+              eq(threadTable.visibility, 'public'),
+            ),
+          ),
+        ),
+      )
       .orderBy(desc(postTable.dateCreated))
       .offset(postQuery.offset)
       .limit(postQuery.limit);
@@ -345,7 +364,7 @@ export class PostService {
       .groupBy(reactionTable.postId)
       .as('rc');
 
-    let query = this.db
+    return this.db
       .select({
         id: postTable.id,
         owner: {
@@ -403,56 +422,5 @@ export class PostService {
         postTable.dateCreated,
       )
       .$dynamic();
-
-    if (getFollowing) {
-      const userFollow = this.db
-        .select({
-          ...getTableColumns(followTable),
-          followed: sql<boolean>`(if(count(*) = 1, true, false))`.as(
-            'user_followed',
-          ),
-        })
-        .from(followTable)
-        .groupBy(followTable.userId, followTable.followedId)
-        .as('f');
-      const threadFollow = this.db
-        .select({
-          ...getTableColumns(threadFollowTable),
-          followed: sql<boolean>`(if(count(*) = 1, true, false))`.as(
-            'thread_followed',
-          ),
-        })
-        .from(threadFollowTable)
-        .groupBy(threadFollowTable.userId, threadFollowTable.threadId)
-        .as('tf');
-
-      query = query
-        .leftJoin(
-          userFollow,
-          and(
-            eq(userFollow.followedId, userTable.id),
-            eq(userFollow.userId, requesterId),
-          ),
-        )
-        .leftJoin(
-          threadFollow,
-          and(
-            eq(threadFollow.threadId, threadTable.id),
-            eq(threadFollow.userId, requesterId),
-          ),
-        )
-        .where(
-          and(
-            isNull(postTable.groupId),
-            or(
-              eq(threadFollow.followed, true),
-              and(eq(userFollow.followed, true), isNull(postTable.threadId)),
-            ),
-          ),
-        )
-        .$dynamic();
-    }
-
-    return query;
   }
 }

@@ -8,6 +8,7 @@ import {
 } from '@/common/guards';
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { PostQuery } from '@/common/queries';
+import { CommonQuery } from '@/common/queries/common.query';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
@@ -80,7 +81,7 @@ export class PostController {
   @UseGuards(GetRequesterGuard)
   async getAllFollowing(
     @Res({ passthrough: true }) response: Response,
-    @Query() query: PostQuery,
+    @Query() query: CommonQuery,
     @RequesterID() requesterId: number,
   ) {
     const res = await this.postService.getAllFollowing(query, requesterId);
