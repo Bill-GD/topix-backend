@@ -24,8 +24,6 @@ export const Tables = {
   post: 'post',
   reaction: 'reaction',
   media: 'media',
-  mediaTemp: 'media_temp',
-  postStats: 'post_stats',
   group: 'group',
   groupMember: 'group_member',
   tag: 'tag',

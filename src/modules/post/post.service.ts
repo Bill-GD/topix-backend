@@ -8,7 +8,6 @@ import {
   groupMemberTable,
   groupTable,
   mediaTable,
-  postStatsTable,
   postTable,
   profileTable,
   reactionTable,
@@ -58,8 +57,6 @@ export class PostService {
         visibility: dto.visibility,
       })
       .$returningId();
-
-    await this.db.insert(postStatsTable).values({ postId });
 
     await additional?.();
 
@@ -235,7 +232,7 @@ export class PostService {
   }
 
   async reply(postId: number, ownerId: number, dto: CreatePostDto) {
-    const [{ id: replyId }] = await this.db
+    await this.db
       .insert(postTable)
       .values({
         ownerId: ownerId,
@@ -247,11 +244,10 @@ export class PostService {
       })
       .$returningId();
 
-    await this.db.insert(postStatsTable).values({ postId: replyId });
     await this.db
-      .update(postStatsTable)
-      .set({ replyCount: sql`${postStatsTable.replyCount} + 1` })
-      .where(eq(postStatsTable.postId, postId));
+      .update(postTable)
+      .set({ replyCount: sql`${postTable.replyCount} + 1` })
+      .where(eq(postTable.id, postId));
 
     if (dto.fileObjects) {
       await this.uploadFileObjects(postId, dto.type, dto.fileObjects);
@@ -281,9 +277,9 @@ export class PostService {
 
     if (posts[0].parentPostId) {
       await this.db
-        .update(postStatsTable)
-        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-        .where(eq(postStatsTable.postId, posts[0].parentPostId));
+        .update(postTable)
+        .set({ replyCount: sql`${postTable.replyCount} - 1` })
+        .where(eq(postTable.id, posts[0].parentPostId));
     }
 
     if (posts[0].threadId) {
@@ -361,7 +357,7 @@ export class PostService {
         content: postTable.content,
         reaction: reactionTable.type,
         reactionCount: sql<number>`(ifnull(${reactCount.count}, 0))`,
-        replyCount: postStatsTable.replyCount,
+        replyCount: postTable.replyCount,
         media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
@@ -379,7 +375,6 @@ export class PostService {
         dateUpdated: postTable.dateUpdated,
       })
       .from(postTable)
-      .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
       .innerJoin(userTable, eq(userTable.id, postTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
       .leftJoin(threadTable, eq(postTable.threadId, threadTable.id))
@@ -405,7 +400,6 @@ export class PostService {
         postTable.id,
         reactionTable.userId,
         reactionTable.type,
-        postStatsTable.replyCount,
         postTable.dateCreated,
       )
       .$dynamic();
