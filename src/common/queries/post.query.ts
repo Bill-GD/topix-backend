@@ -6,6 +6,10 @@ import { IsBoolean, IsOptional } from 'class-validator';
 
 export class PostQuery extends CommonQuery {
   @ApiPropertyOptional()
+  @IsOptionalString()
+  username?: string;
+
+  @ApiPropertyOptional()
   @IsPositiveNumber()
   @IsOptional()
   userId?: number;
@@ -56,4 +60,8 @@ export class PostQuery extends CommonQuery {
   @ApiPropertyOptional()
   @IsOptionalString()
   visibility: 'public' | 'private' | 'hidden' = 'public';
+
+  @ApiPropertyOptional()
+  @IsOptionalString()
+  content?: string;
 }

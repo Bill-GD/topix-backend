@@ -21,7 +21,17 @@ import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNotNull, isNull, or, SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  like,
+  or,
+  SQL,
+  sql,
+} from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
@@ -111,6 +121,19 @@ export class PostService {
 
     if (postQuery.userId) {
       andQueries.push(eq(postTable.ownerId, postQuery.userId));
+    }
+    if (postQuery.username) {
+      andQueries.push(
+        <SQL<unknown>>(
+          or(
+            like(userTable.username, `%${postQuery.username}%`),
+            like(profileTable.displayName, `%${postQuery.username}%`),
+          )
+        ),
+      );
+    }
+    if (postQuery.content) {
+      andQueries.push(like(postTable.content, `%${postQuery.content}%`));
     }
 
     switch (postQuery.visibility) {
