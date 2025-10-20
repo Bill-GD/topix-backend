@@ -9,6 +9,7 @@ import {
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { UserQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { addPaginateHeader } from '@/common/utils/helpers';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { UserService } from '@/modules/user/user.service';
 import {
@@ -26,9 +27,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 
 @Controller('user')
 @UseGuards(AuthenticatedGuard)
@@ -38,8 +41,12 @@ export class UserController {
 
   @Get()
   @UseGuards(AuthenticatedGuard, GetRequesterGuard, IsAdminGuard)
-  async getAll(@Query() query: UserQuery) {
+  async getAll(
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: UserQuery,
+  ) {
     const res = await this.userService.getUsers(query);
+    addPaginateHeader(response, res.data.length < query.size);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

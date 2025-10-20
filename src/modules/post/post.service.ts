@@ -1,4 +1,5 @@
 import { PostQuery } from '@/common/queries';
+import { CommonQuery } from '@/common/queries/common.query';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { getCloudinaryIdFromUrl } from '@/common/utils/helpers';
 import { Result } from '@/common/utils/result';
@@ -8,7 +9,6 @@ import {
   groupMemberTable,
   groupTable,
   mediaTable,
-  postStatsTable,
   postTable,
   profileTable,
   reactionTable,
@@ -21,16 +21,7 @@ import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  isNull,
-  or,
-  SQL,
-  sql,
-} from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, or, SQL, sql } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
@@ -59,8 +50,6 @@ export class PostService {
       })
       .$returningId();
 
-    await this.db.insert(postStatsTable).values({ postId });
-
     await additional?.();
 
     if (dto.fileObjects) {
@@ -75,28 +64,55 @@ export class PostService {
     if (postQuery.groupId) {
       andQueries.push(
         eq(postTable.groupId, postQuery.groupId),
-        eq(postTable.groupApproved, postQuery.accepted),
+        isNull(postTable.threadId),
+        isNull(postTable.parentPostId),
       );
-      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
+      if (postQuery.approved !== undefined) {
+        andQueries.push(eq(postTable.groupApproved, postQuery.approved));
+      }
       if (postQuery.tagId) andQueries.push(eq(tagTable.id, postQuery.tagId));
-    } else {
+    } else if (postQuery.groupId === null) {
       andQueries.push(isNull(postTable.groupId));
     }
 
     if (postQuery.threadId) {
-      andQueries.push(eq(postTable.threadId, postQuery.threadId));
-      if (!postQuery.parentId) andQueries.push(isNull(postTable.parentPostId));
-    } else {
+      andQueries.push(
+        eq(postTable.threadId, postQuery.threadId),
+        isNull(postTable.parentPostId),
+      );
+    } else if (postQuery.threadId === null) {
       andQueries.push(isNull(postTable.threadId));
+    }
+
+    // not specified -> fetching from feed
+    if (postQuery.threadId === undefined && postQuery.groupId === undefined) {
+      andQueries.push(
+        <SQL<unknown>>(
+          or(
+            and(
+              isNull(postTable.groupId),
+              or(
+                isNull(postTable.threadId),
+                eq(threadTable.visibility, 'public'),
+              ),
+            ),
+            and(
+              isNotNull(postTable.groupId),
+              eq(groupMemberTable.accepted, true),
+            ),
+          )
+        ),
+      );
     }
 
     if (postQuery.parentId) {
       andQueries.push(eq(postTable.parentPostId, postQuery.parentId));
     }
 
-    if (postQuery.username) {
-      andQueries.push(eq(userTable.username, postQuery.username));
+    if (postQuery.userId) {
+      andQueries.push(eq(postTable.ownerId, postQuery.userId));
     }
+
     switch (postQuery.visibility) {
       case 'public':
         andQueries.push(eq(postTable.visibility, 'public'));
@@ -141,8 +157,35 @@ export class PostService {
     );
   }
 
-  async getAllFollowing(postQuery: PostQuery, requesterId: number) {
-    const posts = await this.getPostQuery(requesterId, true)
+  async getAllFollowing(postQuery: CommonQuery, requesterId: number) {
+    const followedUserIds = this.db
+      .select({ id: followTable.followedId })
+      .from(followTable)
+      .where(eq(followTable.userId, requesterId));
+
+    const followedThreadIds = this.db
+      .select({ id: threadFollowTable.threadId })
+      .from(threadFollowTable)
+      .where(eq(threadFollowTable.userId, requesterId));
+
+    const posts = await this.getPostQuery(requesterId)
+      .where(
+        and(
+          isNull(postTable.groupId),
+          or(
+            and(
+              inArray(postTable.ownerId, followedUserIds),
+              isNull(postTable.threadId),
+              eq(postTable.visibility, 'public'),
+            ),
+            and(
+              inArray(postTable.threadId, followedThreadIds),
+              isNull(postTable.parentPostId),
+              eq(threadTable.visibility, 'public'),
+            ),
+          ),
+        ),
+      )
       .orderBy(desc(postTable.dateCreated))
       .offset(postQuery.offset)
       .limit(postQuery.limit);
@@ -235,7 +278,7 @@ export class PostService {
   }
 
   async reply(postId: number, ownerId: number, dto: CreatePostDto) {
-    const [{ id: replyId }] = await this.db
+    await this.db
       .insert(postTable)
       .values({
         ownerId: ownerId,
@@ -247,11 +290,10 @@ export class PostService {
       })
       .$returningId();
 
-    await this.db.insert(postStatsTable).values({ postId: replyId });
     await this.db
-      .update(postStatsTable)
-      .set({ replyCount: sql`${postStatsTable.replyCount} + 1` })
-      .where(eq(postStatsTable.postId, postId));
+      .update(postTable)
+      .set({ replyCount: sql`${postTable.replyCount} + 1` })
+      .where(eq(postTable.id, postId));
 
     if (dto.fileObjects) {
       await this.uploadFileObjects(postId, dto.type, dto.fileObjects);
@@ -281,9 +323,9 @@ export class PostService {
 
     if (posts[0].parentPostId) {
       await this.db
-        .update(postStatsTable)
-        .set({ replyCount: sql`${postStatsTable.replyCount} - 1` })
-        .where(eq(postStatsTable.postId, posts[0].parentPostId));
+        .update(postTable)
+        .set({ replyCount: sql`${postTable.replyCount} - 1` })
+        .where(eq(postTable.id, posts[0].parentPostId));
     }
 
     if (posts[0].threadId) {
@@ -339,7 +381,7 @@ export class PostService {
     }));
   }
 
-  private getPostQuery(requesterId: number, getFollowing: boolean = false) {
+  private getPostQuery(requesterId: number) {
     const reactCount = this.db
       .select({
         postId: reactionTable.postId,
@@ -349,7 +391,7 @@ export class PostService {
       .groupBy(reactionTable.postId)
       .as('rc');
 
-    let query = this.db
+    return this.db
       .select({
         id: postTable.id,
         owner: {
@@ -361,7 +403,7 @@ export class PostService {
         content: postTable.content,
         reaction: reactionTable.type,
         reactionCount: sql<number>`(ifnull(${reactCount.count}, 0))`,
-        replyCount: postStatsTable.replyCount,
+        replyCount: postTable.replyCount,
         media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
@@ -379,7 +421,6 @@ export class PostService {
         dateUpdated: postTable.dateUpdated,
       })
       .from(postTable)
-      .innerJoin(postStatsTable, eq(postStatsTable.postId, postTable.id))
       .innerJoin(userTable, eq(userTable.id, postTable.ownerId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
       .leftJoin(threadTable, eq(postTable.threadId, threadTable.id))
@@ -405,60 +446,8 @@ export class PostService {
         postTable.id,
         reactionTable.userId,
         reactionTable.type,
-        postStatsTable.replyCount,
         postTable.dateCreated,
       )
       .$dynamic();
-
-    if (getFollowing) {
-      const userFollow = this.db
-        .select({
-          ...getTableColumns(followTable),
-          followed: sql<boolean>`(if(count(*) = 1, true, false))`.as(
-            'user_followed',
-          ),
-        })
-        .from(followTable)
-        .groupBy(followTable.userId, followTable.followedId)
-        .as('f');
-      const threadFollow = this.db
-        .select({
-          ...getTableColumns(threadFollowTable),
-          followed: sql<boolean>`(if(count(*) = 1, true, false))`.as(
-            'thread_followed',
-          ),
-        })
-        .from(threadFollowTable)
-        .groupBy(threadFollowTable.userId, threadFollowTable.threadId)
-        .as('tf');
-
-      query = query
-        .leftJoin(
-          userFollow,
-          and(
-            eq(userFollow.followedId, userTable.id),
-            eq(userFollow.userId, requesterId),
-          ),
-        )
-        .leftJoin(
-          threadFollow,
-          and(
-            eq(threadFollow.threadId, threadTable.id),
-            eq(threadFollow.userId, requesterId),
-          ),
-        )
-        .where(
-          and(
-            isNull(postTable.groupId),
-            or(
-              eq(threadFollow.followed, true),
-              and(eq(userFollow.followed, true), isNull(postTable.threadId)),
-            ),
-          ),
-        )
-        .$dynamic();
-    }
-
-    return query;
   }
 }

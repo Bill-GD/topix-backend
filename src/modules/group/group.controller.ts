@@ -10,7 +10,7 @@ import { FileSizeValidatorPipe } from '@/common/pipes';
 import { GroupQuery, MemberQuery } from '@/common/queries';
 import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
-import { getReadableSize } from '@/common/utils/helpers';
+import { getReadableSize, addPaginateHeader } from '@/common/utils/helpers';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
@@ -28,10 +28,12 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupService } from './group.service';
@@ -70,8 +72,13 @@ export class GroupController {
   }
 
   @Get()
-  async getAll(@Query() query: GroupQuery, @RequesterID() requesterId: number) {
+  async getAll(
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: GroupQuery,
+    @RequesterID() requesterId: number,
+  ) {
     const res = await this.groupService.getAll(query, requesterId);
+    addPaginateHeader(response, res.data.length < query.size);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
@@ -104,10 +111,12 @@ export class GroupController {
   @Get(':id/members')
   @UseGuards(GroupExistGuard)
   async getAllMembers(
+    @Res({ passthrough: true }) response: Response,
     @Query() query: MemberQuery,
     @Param('id', ParseIntPipe) groupId: number,
   ) {
     const res = await this.groupService.getAllMembers(groupId, query);
+    addPaginateHeader(response, res.data.length < query.size);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

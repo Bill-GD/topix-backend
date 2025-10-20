@@ -21,6 +21,7 @@ import * as mysql from 'mysql2/promise';
           schema,
           casing: 'snake_case',
           mode: 'default',
+          // logger: true,
         });
       },
     },

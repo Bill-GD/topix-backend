@@ -8,7 +8,9 @@ import {
 } from '@/common/guards';
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { PostQuery } from '@/common/queries';
+import { CommonQuery } from '@/common/queries/common.query';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { addPaginateHeader } from '@/common/utils/helpers';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import {
   Body,
@@ -23,9 +25,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { CreatePostDto } from './dto/create-post.dto';
 import { ReactDto } from './dto/react.dto';
 import { PostService } from './post.service';
@@ -63,18 +67,25 @@ export class PostController {
 
   @Get()
   @UseGuards(GetRequesterGuard)
-  async getAll(@Query() query: PostQuery, @RequesterID() requesterId: number) {
+  async getAll(
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: PostQuery,
+    @RequesterID() requesterId: number,
+  ) {
     const res = await this.postService.getAll(query, requesterId);
+    addPaginateHeader(response, res.data.length < query.size);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Get('following')
   @UseGuards(GetRequesterGuard)
   async getAllFollowing(
-    @Query() query: PostQuery,
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: CommonQuery,
     @RequesterID() requesterId: number,
   ) {
     const res = await this.postService.getAllFollowing(query, requesterId);
+    addPaginateHeader(response, res.data.length < query.size);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

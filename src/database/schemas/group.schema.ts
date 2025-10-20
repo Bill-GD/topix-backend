@@ -13,7 +13,7 @@ export const groupTable = mysqlTable(Tables.group, {
   id: autoId,
   ownerId: int('owner_id')
     .notNull()
-    .references(() => userTable.id),
+    .references(() => userTable.id, { onDelete: 'cascade' }),
   name: varchar({ length: 255 }).notNull(),
   bannerPicture: text('banner_picture'),
   description: text(),

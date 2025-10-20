@@ -39,8 +39,8 @@ export class ThreadService {
       andQueries.push(isNull(threadTable.groupId));
     }
 
-    if (threadQuery.username) {
-      andQueries.push(eq(userTable.username, threadQuery.username));
+    if (threadQuery.userId) {
+      andQueries.push(eq(userTable.id, threadQuery.userId));
     }
     if (threadQuery.tagId) {
       andQueries.push(eq(tagTable.id, threadQuery.tagId));

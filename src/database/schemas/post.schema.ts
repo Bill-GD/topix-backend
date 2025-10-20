@@ -34,6 +34,7 @@ export const postTable = mysqlTable(
     }),
     content: text().notNull(),
     groupApproved: boolean('group_approved').notNull().default(false),
+    replyCount: int('reply_count').notNull().default(0),
     visibility,
     dateCreated: timestamps.dateCreated(),
     dateUpdated: timestamps.dateUpdated(),
@@ -67,12 +68,4 @@ export const mediaTable = mysqlTable(Tables.media, {
     .references(() => postTable.id, { onDelete: 'cascade' }),
   type: mysqlEnum(MediaTypes).notNull(),
   path: text().notNull(),
-});
-
-export const postStatsTable = mysqlTable(Tables.postStats, {
-  id: autoId,
-  postId: int('post_id')
-    .notNull()
-    .references(() => postTable.id, { onDelete: 'cascade' }),
-  replyCount: int('reply_count').notNull().default(0),
 });

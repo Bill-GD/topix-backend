@@ -8,7 +8,7 @@ export class GroupQuery extends CommonQuery {
   @ApiPropertyOptional()
   @IsPositiveNumber()
   @IsOptional()
-  ownerId?: number;
+  userId?: number;
 
   @ApiPropertyOptional()
   @IsOptionalString()
