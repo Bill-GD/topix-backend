@@ -215,7 +215,6 @@ export class PostService implements OnModuleInit {
       andQueries.push(like(postTable.content, `%${postQuery.content}%`));
     }
     if (postQuery.hasMedia !== undefined) {
-      console.log(postQuery.hasMedia);
       andQueries.push(
         postQuery.hasMedia
           ? isNotNull(this.postMedia.postMedia)
