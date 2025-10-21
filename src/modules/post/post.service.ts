@@ -160,6 +160,9 @@ export class PostService implements OnModuleInit {
         andQueries.push(eq(postTable.groupApproved, postQuery.approved));
       }
       if (postQuery.tagId) andQueries.push(eq(tagTable.id, postQuery.tagId));
+      else if (postQuery.tagName) {
+        andQueries.push(like(tagTable.name, `%${postQuery.tagName}%`));
+      }
     } else if (postQuery.groupId === null) {
       andQueries.push(isNull(postTable.groupId));
     }

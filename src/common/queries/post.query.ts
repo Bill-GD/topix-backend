@@ -66,6 +66,10 @@ export class PostQuery extends CommonQuery {
   content?: string;
 
   @ApiPropertyOptional()
+  @IsOptionalString()
+  tagName?: string;
+
+  @ApiPropertyOptional()
   @Type(() => String)
   @Transform(({ value }) => {
     const strVal = (value as string).toLowerCase();
