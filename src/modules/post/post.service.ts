@@ -32,14 +32,66 @@ import {
   SQL,
   sql,
 } from 'drizzle-orm';
-import { SubqueryWithSelection } from 'drizzle-orm/mysql-core';
+import { MySqlColumn, SubqueryWithSelection } from 'drizzle-orm/mysql-core';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
 @Injectable()
 export class PostService implements OnModuleInit {
-  private reactCount: SubqueryWithSelection<any, any>;
-  private postMedia: SubqueryWithSelection<any, any>;
+  private reactCount: SubqueryWithSelection<
+    {
+      postId: MySqlColumn<
+        {
+          name: 'post_id';
+          tableName: 'reaction';
+          dataType: 'number';
+          columnType: 'MySqlInt';
+          data: number;
+          driverParam: string | number;
+          notNull: true;
+          hasDefault: false;
+          isPrimaryKey: false;
+          isAutoincrement: false;
+          hasRuntimeDefault: false;
+          enumValues: undefined;
+          baseColumn: never;
+          identity: undefined;
+          generated: undefined;
+        },
+        {},
+        {}
+      >;
+      count: SQL.Aliased<number>;
+    },
+    'rc'
+  >;
+  private postMedia: SubqueryWithSelection<
+    {
+      postId: MySqlColumn<
+        {
+          name: 'post_id';
+          tableName: 'media';
+          dataType: 'number';
+          columnType: 'MySqlInt';
+          data: number;
+          driverParam: string | number;
+          notNull: true;
+          hasDefault: false;
+          isPrimaryKey: false;
+          isAutoincrement: false;
+          hasRuntimeDefault: false;
+          enumValues: undefined;
+          baseColumn: never;
+          identity: undefined;
+          generated: undefined;
+        },
+        {},
+        {}
+      >;
+      postMedia: SQL.Aliased<string>;
+    },
+    'pm'
+  >;
 
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
