@@ -64,4 +64,18 @@ export class PostQuery extends CommonQuery {
   @ApiPropertyOptional()
   @IsOptionalString()
   content?: string;
+
+  @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => {
+    const strVal = (value as string).toLowerCase();
+    return {
+      true: true,
+      false: false,
+      undefined: undefined,
+    }[strVal];
+  })
+  @IsBoolean()
+  @IsOptional()
+  hasMedia?: boolean;
 }
