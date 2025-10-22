@@ -2,6 +2,7 @@ export { UserExistGuard } from './user-exist.guard';
 export { AccountInfoGuard } from './account-info.guard';
 export { UserVerifiedGuard } from './user-verified.guard';
 export { AuthenticatedGuard } from './authenticated.guard';
+export { WsAuthenticatedGuard } from './authenticated.ws.guard';
 export { AccountOwnerGuard } from './account-owner.guard';
 export { GetRequesterGuard } from './get-requester.guard';
 export { RefreshTokenGuard } from './refresh-token.guard';

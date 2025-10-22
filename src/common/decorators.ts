@@ -16,6 +16,7 @@ import {
   IsString,
 } from 'class-validator';
 import { Request } from 'express';
+import { Socket } from 'socket.io';
 
 export function ApiController(...extraMimeTypes: string[]) {
   return applyDecorators(
@@ -45,6 +46,14 @@ export const RequesterID = createParamDecorator((data, context) => {
     throw new BadRequestException('No user ID found in request');
   }
   return req.userId;
+});
+
+export const WsRequesterID = createParamDecorator((data, context) => {
+  const client = context.switchToWs().getClient<Socket>();
+  if (!client.data.userId) {
+    throw new BadRequestException('No user ID found in request');
+  }
+  return client.data.userId;
 });
 
 export function IsNotEmptyString() {

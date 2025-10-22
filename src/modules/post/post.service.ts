@@ -40,54 +40,46 @@ import { CreatePostDto } from './dto/create-post.dto';
 export class PostService implements OnModuleInit {
   private reactCount: SubqueryWithSelection<
     {
-      postId: MySqlColumn<
-        {
-          name: 'post_id';
-          tableName: 'reaction';
-          dataType: 'number';
-          columnType: 'MySqlInt';
-          data: number;
-          driverParam: string | number;
-          notNull: true;
-          hasDefault: false;
-          isPrimaryKey: false;
-          isAutoincrement: false;
-          hasRuntimeDefault: false;
-          enumValues: undefined;
-          baseColumn: never;
-          identity: undefined;
-          generated: undefined;
-        },
-        {},
-        {}
-      >;
+      postId: MySqlColumn<{
+        name: 'post_id';
+        tableName: 'reaction';
+        dataType: 'number';
+        columnType: 'MySqlInt';
+        data: number;
+        driverParam: string | number;
+        notNull: true;
+        hasDefault: false;
+        isPrimaryKey: false;
+        isAutoincrement: false;
+        hasRuntimeDefault: false;
+        enumValues: undefined;
+        baseColumn: never;
+        identity: undefined;
+        generated: undefined;
+      }>;
       count: SQL.Aliased<number>;
     },
     'rc'
   >;
   private postMedia: SubqueryWithSelection<
     {
-      postId: MySqlColumn<
-        {
-          name: 'post_id';
-          tableName: 'media';
-          dataType: 'number';
-          columnType: 'MySqlInt';
-          data: number;
-          driverParam: string | number;
-          notNull: true;
-          hasDefault: false;
-          isPrimaryKey: false;
-          isAutoincrement: false;
-          hasRuntimeDefault: false;
-          enumValues: undefined;
-          baseColumn: never;
-          identity: undefined;
-          generated: undefined;
-        },
-        {},
-        {}
-      >;
+      postId: MySqlColumn<{
+        name: 'post_id';
+        tableName: 'media';
+        dataType: 'number';
+        columnType: 'MySqlInt';
+        data: number;
+        driverParam: string | number;
+        notNull: true;
+        hasDefault: false;
+        isPrimaryKey: false;
+        isAutoincrement: false;
+        hasRuntimeDefault: false;
+        enumValues: undefined;
+        baseColumn: never;
+        identity: undefined;
+        generated: undefined;
+      }>;
       postMedia: SQL.Aliased<string>;
     },
     'pm'
