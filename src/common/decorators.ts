@@ -50,10 +50,12 @@ export const RequesterID = createParamDecorator((data, context) => {
 
 export const WsRequesterID = createParamDecorator((data, context) => {
   const client = context.switchToWs().getClient<Socket>();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (!client.data.userId) {
-    throw new BadRequestException('No user ID found in request');
+    throw new BadRequestException('No user ID found in WS event');
   }
-  return client.data.userId;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  return client.data.userId as number;
 });
 
 export function IsNotEmptyString() {

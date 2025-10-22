@@ -32,7 +32,9 @@ export class WsAuthenticatedGuard implements CanActivate {
     try {
       const user = this.jwt.verify<JwtUserPayload>(authToken);
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       client.data.userId = user.sub;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       client.data.userRole = user.role;
       if (user.type !== 'access') {
         throw new JsonWebTokenError('Invalid token provided.');
