@@ -20,17 +20,106 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { ReactDto } from '@/modules/post/dto/react.dto';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
-import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNotNull, isNull, or, SQL, sql } from 'drizzle-orm';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  and,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  like,
+  or,
+  SQL,
+  sql,
+} from 'drizzle-orm';
+import { MySqlColumn, SubqueryWithSelection } from 'drizzle-orm/mysql-core';
 import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 import { CreatePostDto } from './dto/create-post.dto';
 
 @Injectable()
-export class PostService {
+export class PostService implements OnModuleInit {
+  private reactCount: SubqueryWithSelection<
+    {
+      postId: MySqlColumn<
+        {
+          name: 'post_id';
+          tableName: 'reaction';
+          dataType: 'number';
+          columnType: 'MySqlInt';
+          data: number;
+          driverParam: string | number;
+          notNull: true;
+          hasDefault: false;
+          isPrimaryKey: false;
+          isAutoincrement: false;
+          hasRuntimeDefault: false;
+          enumValues: undefined;
+          baseColumn: never;
+          identity: undefined;
+          generated: undefined;
+        },
+        {},
+        {}
+      >;
+      count: SQL.Aliased<number>;
+    },
+    'rc'
+  >;
+  private postMedia: SubqueryWithSelection<
+    {
+      postId: MySqlColumn<
+        {
+          name: 'post_id';
+          tableName: 'media';
+          dataType: 'number';
+          columnType: 'MySqlInt';
+          data: number;
+          driverParam: string | number;
+          notNull: true;
+          hasDefault: false;
+          isPrimaryKey: false;
+          isAutoincrement: false;
+          hasRuntimeDefault: false;
+          enumValues: undefined;
+          baseColumn: never;
+          identity: undefined;
+          generated: undefined;
+        },
+        {},
+        {}
+      >;
+      postMedia: SQL.Aliased<string>;
+    },
+    'pm'
+  >;
+
   constructor(
     @Inject(DatabaseProviderKey) private readonly db: DBType,
     private readonly fileService: FileService,
   ) {}
+
+  onModuleInit(): any {
+    this.reactCount = this.db
+      .select({
+        postId: reactionTable.postId,
+        count: sql<number>`(count(*))`.as('count'),
+      })
+      .from(reactionTable)
+      .groupBy(reactionTable.postId)
+      .as('rc');
+
+    this.postMedia = this.db
+      .select({
+        postId: mediaTable.postId,
+        postMedia:
+          sql<string>`(group_concat(${mediaTable.path} separator ';'))`.as(
+            'post_media',
+          ),
+      })
+      .from(mediaTable)
+      .groupBy(mediaTable.postId)
+      .as('pm');
+  }
 
   async create(
     ownerId: number,
@@ -71,6 +160,9 @@ export class PostService {
         andQueries.push(eq(postTable.groupApproved, postQuery.approved));
       }
       if (postQuery.tagId) andQueries.push(eq(tagTable.id, postQuery.tagId));
+      else if (postQuery.tagName) {
+        andQueries.push(like(tagTable.name, `%${postQuery.tagName}%`));
+      }
     } else if (postQuery.groupId === null) {
       andQueries.push(isNull(postTable.groupId));
     }
@@ -111,6 +203,26 @@ export class PostService {
 
     if (postQuery.userId) {
       andQueries.push(eq(postTable.ownerId, postQuery.userId));
+    }
+    if (postQuery.username) {
+      andQueries.push(
+        <SQL<unknown>>(
+          or(
+            like(userTable.username, `%${postQuery.username}%`),
+            like(profileTable.displayName, `%${postQuery.username}%`),
+          )
+        ),
+      );
+    }
+    if (postQuery.content) {
+      andQueries.push(like(postTable.content, `%${postQuery.content}%`));
+    }
+    if (postQuery.hasMedia !== undefined) {
+      andQueries.push(
+        postQuery.hasMedia
+          ? isNotNull(this.postMedia.postMedia)
+          : isNull(this.postMedia.postMedia),
+      );
     }
 
     switch (postQuery.visibility) {
@@ -382,15 +494,6 @@ export class PostService {
   }
 
   private getPostQuery(requesterId: number) {
-    const reactCount = this.db
-      .select({
-        postId: reactionTable.postId,
-        count: sql<number>`(count(*))`.as('count'),
-      })
-      .from(reactionTable)
-      .groupBy(reactionTable.postId)
-      .as('rc');
-
     return this.db
       .select({
         id: postTable.id,
@@ -402,9 +505,9 @@ export class PostService {
         },
         content: postTable.content,
         reaction: reactionTable.type,
-        reactionCount: sql<number>`(ifnull(${reactCount.count}, 0))`,
+        reactionCount: sql<number>`(ifnull(${this.reactCount.count}, 0))`,
         replyCount: postTable.replyCount,
-        media: sql<string>`(group_concat(${mediaTable.path} separator ';'))`,
+        media: this.postMedia.postMedia,
         parentPostId: postTable.parentPostId,
         threadId: postTable.threadId,
         threadTitle: threadTable.title,
@@ -432,7 +535,8 @@ export class PostService {
           eq(reactionTable.userId, requesterId),
         ),
       )
-      .leftJoin(reactCount, eq(reactCount.postId, postTable.id))
+      .leftJoin(this.reactCount, eq(this.reactCount.postId, postTable.id))
+      .leftJoin(this.postMedia, eq(this.postMedia.postId, postTable.id))
       .leftJoin(
         groupMemberTable,
         and(
@@ -447,6 +551,7 @@ export class PostService {
         reactionTable.userId,
         reactionTable.type,
         postTable.dateCreated,
+        this.postMedia.postMedia,
       )
       .$dynamic();
   }
