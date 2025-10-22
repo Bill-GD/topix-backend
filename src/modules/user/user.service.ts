@@ -12,7 +12,7 @@ import {
 import { FileService } from '@/modules/file/file.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, like, or, SQL, sql } from 'drizzle-orm';
 
 @Injectable()
 export class UserService {
@@ -22,6 +22,19 @@ export class UserService {
   ) {}
 
   async getUsers(userQuery: UserQuery) {
+    const andQueries: SQL[] = [];
+
+    if (userQuery.name) {
+      andQueries.push(
+        <SQL<unknown>>(
+          or(
+            like(userTable.username, `%${userQuery.name}%`),
+            like(profileTable.displayName, `%${userQuery.name}%`),
+          )
+        ),
+      );
+    }
+
     const users = await this.db
       .select({
         id: userTable.id,
@@ -32,6 +45,7 @@ export class UserService {
       })
       .from(userTable)
       .innerJoin(profileTable, eq(userTable.id, profileTable.userId))
+      .where(and(...andQueries))
       .limit(userQuery.limit)
       .offset(userQuery.offset);
 
