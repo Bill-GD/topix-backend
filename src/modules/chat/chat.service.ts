@@ -1,23 +1,43 @@
 import { DatabaseProviderKey } from '@/common/utils/constants';
+import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
+import { chatChannelTable } from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { CreateChatDto } from './dto/create-chat.dto';
+import { eq } from 'drizzle-orm';
+import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 
 @Injectable()
 export class ChatService {
   constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
 
-  sendChat(dto: CreateChatDto) {
-    return 'This action adds a new chat';
+  async createChannel(dto: CreateChatChannelDto, requesterId: number) {
+    await this.db.insert(chatChannelTable).values({
+      firstUser: requesterId,
+      secondUser: dto.targetId,
+    });
+    return Result.ok('This action adds a new chat', null);
   }
 
   getAll() {
     return `This action returns all chat`;
   }
 
-  getOne(id: number) {
-    return `This action returns a #${id} chat`;
+  async getChannel(channelId: number) {
+    const res = await this.db
+      .select()
+      .from(chatChannelTable)
+      .where(eq(chatChannelTable.id, channelId))
+      // join more to get both users
+      .limit(1);
+
+    if (res.length !== 1) return Result.fail('Channel not found');
+
+    return Result.ok(`Fetched chat channel successfully`, res[0]);
+  }
+
+  sendChat(dto: CreateChatChannelDto) {
+    return 'This action adds a new chat';
   }
 
   update(id: number, dto: UpdateChatDto) {

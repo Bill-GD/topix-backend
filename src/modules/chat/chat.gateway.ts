@@ -10,8 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { ChatService } from './chat.service';
-import { CreateChatDto } from './dto/create-chat.dto';
-import { UpdateChatDto } from './dto/update-chat.dto';
+import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 
 @WebSocketGateway({
   namespace: 'chatws',
@@ -30,29 +29,14 @@ export class ChatGateway {
   @SubscribeMessage('send')
   send(
     @WsRequesterID() requesterId: number,
-    @MessageBody() dto: CreateChatDto,
+    @MessageBody() dto: CreateChatChannelDto,
   ) {
     this.server.emit('send', `custom message to ${requesterId}`);
     return this.chatService.sendChat(dto);
   }
 
-  @SubscribeMessage('getAllChat')
-  getAll() {
-    return this.chatService.getAll();
-  }
-
-  @SubscribeMessage('getOneChat')
-  getOne(@MessageBody() id: number) {
-    return this.chatService.getOne(id);
-  }
-
-  @SubscribeMessage('updateChat')
-  update(@MessageBody() dto: UpdateChatDto) {
-    return this.chatService.update(dto.id, dto);
-  }
-
-  @SubscribeMessage('removeChat')
-  remove(@MessageBody() id: number) {
+  @SubscribeMessage('remove')
+  removeMessage(@MessageBody() id: number) {
     return this.chatService.remove(id);
   }
 }
