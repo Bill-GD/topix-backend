@@ -12,11 +12,14 @@ export class ChatService {
   constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
 
   async createChannel(dto: CreateChatChannelDto, requesterId: number) {
-    await this.db.insert(chatChannelTable).values({
-      firstUser: requesterId,
-      secondUser: dto.targetId,
-    });
-    return Result.ok('This action adds a new chat', null);
+    const [{ id }] = await this.db
+      .insert(chatChannelTable)
+      .values({
+        firstUser: requesterId,
+        secondUser: dto.targetId,
+      })
+      .$returningId();
+    return Result.ok('This action adds a new chat', id);
   }
 
   getAll() {
