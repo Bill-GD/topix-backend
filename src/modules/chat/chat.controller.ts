@@ -1,5 +1,9 @@
 import { ApiController, RequesterID } from '@/common/decorators';
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import {
+  AuthenticatedGuard,
+  ChatChannelDuplicationGuard,
+  GetRequesterGuard,
+} from '@/common/guards';
 import { ChatQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
@@ -27,6 +31,7 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post('channel')
+  @UseGuards(ChatChannelDuplicationGuard)
   async createChannel(
     @RequesterID() requesterId: number,
     @Body() dto: CreateChatChannelDto,
