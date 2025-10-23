@@ -1,9 +1,15 @@
+import { ChatQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
-import { chatChannelTable } from '@/database/schemas';
+import {
+  chatChannelTable,
+  chatMessageTable,
+  profileTable,
+  userTable,
+} from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { desc, eq, or } from 'drizzle-orm';
 import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 
@@ -22,8 +28,71 @@ export class ChatService {
     return Result.ok('This action adds a new chat', id);
   }
 
-  getAll() {
-    return `This action returns all chat`;
+  async getAll(chatQuery: ChatQuery, requesterId: number) {
+    const firstUser = this.db
+        .select({
+          id: userTable.id,
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        })
+        .from(userTable)
+        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+        .as('first_user'),
+      secondUser = this.db
+        .select({
+          id: userTable.id,
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        })
+        .from(userTable)
+        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+        .as('second_user'),
+      lastMessage = this.db
+        .select({
+          channelId: chatMessageTable.channelId,
+          content: chatMessageTable.content,
+          sentAt: chatMessageTable.sentAt,
+        })
+        .from(chatMessageTable)
+        .orderBy(desc(chatMessageTable.sentAt))
+        .limit(1)
+        .as('last_message');
+
+    const res = await this.db
+      .select({
+        id: chatChannelTable.id,
+        firstUser: {
+          id: firstUser.id,
+          username: firstUser.username,
+          displayName: firstUser.displayName,
+          profilePicture: firstUser.profilePicture,
+        },
+        secondUser: {
+          id: secondUser.id,
+          username: secondUser.username,
+          displayName: secondUser.displayName,
+          profilePicture: secondUser.profilePicture,
+        },
+        lastMessage: lastMessage.content,
+        lastSentAt: lastMessage.sentAt,
+        dateCreated: chatChannelTable.dateCreated,
+      })
+      .from(chatChannelTable)
+      .leftJoin(firstUser, eq(firstUser.id, chatChannelTable.firstUser))
+      .leftJoin(secondUser, eq(secondUser.id, chatChannelTable.secondUser))
+      .leftJoin(lastMessage, eq(lastMessage.channelId, chatChannelTable.id))
+      .where(
+        or(
+          eq(chatChannelTable.firstUser, requesterId),
+          eq(chatChannelTable.secondUser, requesterId),
+        ),
+      )
+      .orderBy(desc(chatChannelTable.dateCreated), desc(lastMessage.sentAt))
+      .limit(chatQuery.limit)
+      .offset(chatQuery.offset);
+    return Result.ok(`Fetched chat channel successfully`, res);
   }
 
   async getChannel(channelId: number) {

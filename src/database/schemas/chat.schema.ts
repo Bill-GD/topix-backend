@@ -1,5 +1,5 @@
 import { userTable } from '@/database/schemas/user.schema';
-import { autoId, timestamps, Tables } from '@/database/utils';
+import { autoId, Tables, timestamps } from '@/database/utils';
 import {
   int,
   mysqlTable,
@@ -18,6 +18,7 @@ export const chatChannelTable = mysqlTable(
     secondUser: int('second_user').references(() => userTable.id, {
       onDelete: 'set null',
     }),
+    dateCreated: timestamps.dateCreated(),
   },
   (t) => [unique().on(t.firstUser, t.secondUser)],
 );

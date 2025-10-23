@@ -1,6 +1,8 @@
 import { ApiController, RequesterID } from '@/common/decorators';
 import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import { ChatQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
+import { addPaginateHeader } from '@/common/utils/helpers';
 import { ChatService } from '@/modules/chat/chat.service';
 import { CreateChatChannelDto } from '@/modules/chat/dto/create-chat-channel.dto';
 import {
@@ -12,8 +14,11 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 
 @Controller('chat')
 @UseGuards(AuthenticatedGuard, GetRequesterGuard)
@@ -30,16 +35,16 @@ export class ChatController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
-  // @Get()
-  // async getAll(
-  //   @Res({ passthrough: true }) response: Response,
-  //   @Query() query: GroupQuery,
-  //   @RequesterID() requesterId: number,
-  // ) {
-  //   const res = await this.chatService.getAll(query, requesterId);
-  //   addPaginateHeader(response, res.data.length < query.size);
-  //   return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
-  // }
+  @Get()
+  async getAll(
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: ChatQuery,
+    @RequesterID() requesterId: number,
+  ) {
+    const res = await this.chatService.getAll(query, requesterId);
+    addPaginateHeader(response, res.data.length < query.size);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
 
   @Get(':id')
   async getChannel(@Param('id', ParseIntPipe) channelId: number) {
