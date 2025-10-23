@@ -9,7 +9,7 @@ import {
   userTable,
 } from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, like, or, SQL } from 'drizzle-orm';
 import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 
@@ -60,6 +60,27 @@ export class ChatService {
         .limit(1)
         .as('last_message');
 
+    const andQueries: SQL[] = [];
+    if (chatQuery.username) {
+      andQueries.push(
+        <SQL<unknown>>(
+          or(
+            like(firstUser.displayName, `%${chatQuery.username}%`),
+            like(secondUser.displayName, `%${chatQuery.username}%`),
+          )
+        ),
+      );
+    }
+
+    andQueries.push(
+      <SQL<unknown>>(
+        or(
+          eq(chatChannelTable.firstUser, requesterId),
+          eq(chatChannelTable.secondUser, requesterId),
+        )
+      ),
+    );
+
     const res = await this.db
       .select({
         id: chatChannelTable.id,
@@ -83,12 +104,7 @@ export class ChatService {
       .leftJoin(firstUser, eq(firstUser.id, chatChannelTable.firstUser))
       .leftJoin(secondUser, eq(secondUser.id, chatChannelTable.secondUser))
       .leftJoin(lastMessage, eq(lastMessage.channelId, chatChannelTable.id))
-      .where(
-        or(
-          eq(chatChannelTable.firstUser, requesterId),
-          eq(chatChannelTable.secondUser, requesterId),
-        ),
-      )
+      .where(and(...andQueries))
       .orderBy(desc(chatChannelTable.dateCreated), desc(lastMessage.sentAt))
       .limit(chatQuery.limit)
       .offset(chatQuery.offset);
