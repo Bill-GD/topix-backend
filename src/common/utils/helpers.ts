@@ -28,3 +28,7 @@ export function addPaginateHeader(res: Response, value: boolean) {
   res.setHeader('Access-Control-Expose-Headers', 'X-End-Of-List');
   res.setHeader('X-End-Of-List', `${value}`);
 }
+
+export function getChatChannelId(id: number) {
+  return `chatchannel:${id}`;
+}

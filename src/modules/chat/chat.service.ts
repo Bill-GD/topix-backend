@@ -9,7 +9,7 @@ import {
   userTable,
 } from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, desc, eq, like, or, SQL } from 'drizzle-orm';
+import { and, desc, eq, like, or, SQL } from 'drizzle-orm';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 
@@ -161,8 +161,33 @@ export class ChatService {
     return Result.ok(`Fetched chat channel successfully`, res[0]);
   }
 
-  sendChat(dto: CreateChatChannelDto) {
-    return 'This action adds a new chat';
+  async addMessage(dto: ChatMessageDto, requesterId: number) {
+    const [{ id }] = await this.db
+      .insert(chatMessageTable)
+      .values({
+        channelId: dto.channelId,
+        userId: requesterId,
+        content: dto.content,
+      })
+      .$returningId();
+
+    const [message] = await this.db
+      .select({
+        id: chatMessageTable.id,
+        sender: {
+          id: userTable.id,
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        },
+        content: chatMessageTable.content,
+        sentAt: chatMessageTable.sentAt,
+      })
+      .from(chatMessageTable)
+      .innerJoin(userTable, eq(userTable.id, chatMessageTable.userId))
+      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .where(eq(chatMessageTable.id, id));
+    return Result.ok(`Sent message successfully`, message);
   }
 
   async getMessages(channelId: number, messageQuery: MessageQuery) {
@@ -182,7 +207,7 @@ export class ChatService {
       .innerJoin(userTable, eq(userTable.id, chatMessageTable.userId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
       .where(eq(chatMessageTable.channelId, channelId))
-      .orderBy(asc(chatMessageTable.sentAt))
+      .orderBy(desc(chatMessageTable.sentAt))
       .limit(messageQuery.limit)
       .offset(messageQuery.offset);
     return Result.ok(`Fetched chat messages successfully`, res);

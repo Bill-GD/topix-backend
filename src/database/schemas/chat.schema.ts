@@ -23,23 +23,19 @@ export const chatChannelTable = mysqlTable(
   (t) => [unique().on(t.firstUser, t.secondUser)],
 );
 
-export const chatMessageTable = mysqlTable(
-  Tables.chatMessage,
-  {
-    id: autoId,
-    channelId: int('channel_id')
-      .notNull()
-      .references(() => chatChannelTable.id, {
-        onDelete: 'cascade',
-      }),
-    userId: int('user_id').references(() => userTable.id, {
-      onDelete: 'set null',
+export const chatMessageTable = mysqlTable(Tables.chatMessage, {
+  id: autoId,
+  channelId: int('channel_id')
+    .notNull()
+    .references(() => chatChannelTable.id, {
+      onDelete: 'cascade',
     }),
-    content: text().notNull(),
-    sentAt: timestamps.dateCreated('sent_at'),
-  },
-  (t) => [unique().on(t.channelId, t.userId)],
-);
+  userId: int('user_id').references(() => userTable.id, {
+    onDelete: 'set null',
+  }),
+  content: text().notNull(),
+  sentAt: timestamps.dateCreated('sent_at'),
+});
 
 export const channelLastSeenTable = mysqlTable(
   Tables.channelLastSeen,
