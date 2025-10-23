@@ -4,7 +4,7 @@ import {
   ChatChannelDuplicationGuard,
   GetRequesterGuard,
 } from '@/common/guards';
-import { ChatQuery } from '@/common/queries';
+import { ChatQuery, MessageQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
 import { ChatService } from '@/modules/chat/chat.service';
@@ -60,6 +60,15 @@ export class ChatController {
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
+  @Get(':id/messages')
+  async getMessages(
+    @Query() query: MessageQuery,
+    @Param('id', ParseIntPipe) channelId: number,
+  ) {
+    const res = await this.chatService.getMessages(channelId, query);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
   // // unused
   // @Get(':id/join-status')
   // async getJoinStatus(
@@ -69,12 +78,7 @@ export class ChatController {
   //   const res = await this.chatService.getJoinStatus(groupId, requesterId);
   //   return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   // }
-  //
-  // @Get(':id/tags')
-  // async getAllTags(@Param('id', ParseIntPipe) groupId: number) {
-  //   const res = await this.chatService.getAllTags(groupId);
-  //   return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
-  // }
+
   //
   // @Get(':id/members')
   // @UseGuards(GroupExistGuard)

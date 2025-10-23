@@ -1,4 +1,4 @@
-import { ChatQuery } from '@/common/queries';
+import { ChatQuery, MessageQuery } from '@/common/queries';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
@@ -9,9 +9,9 @@ import {
   userTable,
 } from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, like, or, SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, like, or, SQL } from 'drizzle-orm';
+import { ChatMessageDto } from './dto/chat-message.dto';
 import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
-import { UpdateChatDto } from './dto/update-chat.dto';
 
 @Injectable()
 export class ChatService {
@@ -112,9 +112,46 @@ export class ChatService {
   }
 
   async getChannel(channelId: number) {
+    const firstUser = this.db
+        .select({
+          id: userTable.id,
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        })
+        .from(userTable)
+        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+        .as('first_user'),
+      secondUser = this.db
+        .select({
+          id: userTable.id,
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        })
+        .from(userTable)
+        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+        .as('second_user');
+
     const res = await this.db
-      .select()
+      .select({
+        id: chatChannelTable.id,
+        firstUser: {
+          id: firstUser.id,
+          username: firstUser.username,
+          displayName: firstUser.displayName,
+          profilePicture: firstUser.profilePicture,
+        },
+        secondUser: {
+          id: secondUser.id,
+          username: secondUser.username,
+          displayName: secondUser.displayName,
+          profilePicture: secondUser.profilePicture,
+        },
+      })
       .from(chatChannelTable)
+      .leftJoin(firstUser, eq(firstUser.id, chatChannelTable.firstUser))
+      .leftJoin(secondUser, eq(secondUser.id, chatChannelTable.secondUser))
       .where(eq(chatChannelTable.id, channelId))
       // join more to get both users
       .limit(1);
@@ -128,8 +165,27 @@ export class ChatService {
     return 'This action adds a new chat';
   }
 
-  update(id: number, dto: UpdateChatDto) {
-    return `This action updates a #${id} chat`;
+  async getMessages(channelId: number, messageQuery: MessageQuery) {
+    const res = await this.db
+      .select({
+        id: chatMessageTable.id,
+        sender: {
+          id: userTable.id,
+          username: userTable.username,
+          displayName: profileTable.displayName,
+          profilePicture: profileTable.profilePicture,
+        },
+        content: chatMessageTable.content,
+        sentAt: chatMessageTable.sentAt,
+      })
+      .from(chatMessageTable)
+      .innerJoin(userTable, eq(userTable.id, chatMessageTable.userId))
+      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .where(eq(chatMessageTable.channelId, channelId))
+      .orderBy(asc(chatMessageTable.sentAt))
+      .limit(messageQuery.limit)
+      .offset(messageQuery.offset);
+    return Result.ok(`Fetched chat messages successfully`, res);
   }
 
   remove(id: number) {
