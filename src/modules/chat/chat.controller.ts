@@ -22,7 +22,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { response, Response } from 'express';
+import { Response } from 'express';
 
 @Controller('chat')
 @UseGuards(AuthenticatedGuard, GetRequesterGuard)
