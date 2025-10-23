@@ -22,7 +22,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { response, Response } from 'express';
 
 @Controller('chat')
 @UseGuards(AuthenticatedGuard, GetRequesterGuard)
@@ -62,10 +62,12 @@ export class ChatController {
 
   @Get(':id/messages')
   async getMessages(
+    @Res({ passthrough: true }) response: Response,
     @Query() query: MessageQuery,
     @Param('id', ParseIntPipe) channelId: number,
   ) {
     const res = await this.chatService.getMessages(channelId, query);
+    addPaginateHeader(response, res.data.length < query.size);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
