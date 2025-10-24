@@ -32,14 +32,21 @@ export class ChatGateway {
 
   @SubscribeMessage('join')
   async joinChatChannel(
-    @WsRequesterID() requesterId: number,
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: ChatChannelDto,
   ) {
     const roomId = getChatChannelId(dto.channelId);
     await client.join(roomId);
-    await this.chatService.updateLastSeen(dto.channelId, requesterId);
     return `Joined chat channel ${roomId}`;
+  }
+
+  @SubscribeMessage('seen')
+  async markSeen(
+    @WsRequesterID() requesterId: number,
+    @MessageBody() dto: ChatChannelDto,
+  ) {
+    await this.chatService.updateLastSeen(dto.channelId, requesterId);
+    return 'Seen';
   }
 
   @SubscribeMessage('send')
