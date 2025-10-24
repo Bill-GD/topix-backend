@@ -4,6 +4,7 @@ import { WsAuthenticatedGuard } from '@/common/guards';
 import { getChatChannelId } from '@/common/utils/helpers';
 import { ChatChannelDto } from '@/modules/chat/dto/chat-channel.dto';
 import { ChatMessageDto } from '@/modules/chat/dto/chat-message.dto';
+import { RemoveMessageDto } from '@/modules/chat/dto/remove-message.dto';
 import { UseFilters, UseGuards } from '@nestjs/common';
 import {
   ConnectedSocket,
@@ -54,7 +55,10 @@ export class ChatGateway {
   }
 
   @SubscribeMessage('remove')
-  removeMessage(@MessageBody() id: number) {
-    return this.chatService.remove(id);
+  async removeMessage(@MessageBody() dto: RemoveMessageDto) {
+    await this.chatService.remove(dto.messageId);
+    this.server
+      .to(getChatChannelId(dto.channelId))
+      .emit('remove', dto.messageId);
   }
 }

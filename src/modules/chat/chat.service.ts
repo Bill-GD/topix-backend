@@ -273,7 +273,7 @@ export class ChatService {
       );
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} chat`;
+  async remove(id: number) {
+    await this.db.delete(chatMessageTable).where(eq(chatMessageTable.id, id));
   }
 }
