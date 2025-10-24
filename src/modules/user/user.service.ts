@@ -3,6 +3,7 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  chatChannelTable,
   followTable,
   mediaTable,
   postTable,
@@ -79,6 +80,7 @@ export class UserService {
         followerCount: profileTable.followerCount,
         followingCount: profileTable.followingCount,
         followed: sql<boolean>`(not isnull(${followTable.userId}))`,
+        chatChannelId: chatChannelTable.id,
         role: userTable.role,
       })
       .from(userTable)
@@ -88,6 +90,19 @@ export class UserService {
         and(
           eq(followTable.followedId, userTable.id),
           eq(followTable.userId, requesterId),
+        ),
+      )
+      .leftJoin(
+        chatChannelTable,
+        or(
+          and(
+            eq(chatChannelTable.firstUser, requesterId),
+            eq(chatChannelTable.secondUser, userTable.id),
+          ),
+          and(
+            eq(chatChannelTable.secondUser, requesterId),
+            eq(chatChannelTable.firstUser, userTable.id),
+          ),
         ),
       )
       .where(eq(userTable.username, username));

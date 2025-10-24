@@ -17,6 +17,12 @@ import * as mysql from 'mysql2/promise';
           password: String(process.env.DATABASE_PASSWORD),
           database: String(process.env.DATABASE_NAME),
         });
+
+        poolConnection.on('connection', (conn) => {
+          conn.query("SET time_zone = '+00:00'");
+        });
+        // await poolConnection.query("SET time_zone = '+00:00'");
+
         return drizzle(poolConnection, {
           schema,
           casing: 'snake_case',

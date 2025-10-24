@@ -16,6 +16,7 @@ import {
   IsString,
 } from 'class-validator';
 import { Request } from 'express';
+import { Socket } from 'socket.io';
 
 export function ApiController(...extraMimeTypes: string[]) {
   return applyDecorators(
@@ -45,6 +46,16 @@ export const RequesterID = createParamDecorator((data, context) => {
     throw new BadRequestException('No user ID found in request');
   }
   return req.userId;
+});
+
+export const WsRequesterID = createParamDecorator((data, context) => {
+  const client = context.switchToWs().getClient<Socket>();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  if (!client.data.userId) {
+    throw new BadRequestException('No user ID found in WS event');
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  return client.data.userId as number;
 });
 
 export function IsNotEmptyString() {

@@ -14,16 +14,14 @@ export class CatchEverythingFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   catch(error: Error, host: ArgumentsHost) {
-    let exception = error;
-
-    if (!(exception instanceof HttpException)) {
+    if (!(error instanceof HttpException)) {
       console.log(error.stack);
-      exception = new InternalServerErrorException(error);
+      error = new InternalServerErrorException(error);
     }
 
     this.httpAdapterHost.httpAdapter.reply(
       host.switchToHttp().getResponse(),
-      ControllerResponse.fail(exception as HttpException),
+      ControllerResponse.fail(error as HttpException),
       error instanceof HttpException
         ? error.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR,
