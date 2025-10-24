@@ -3,13 +3,14 @@ import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import {
+  channelLastSeenTable,
   chatChannelTable,
   chatMessageTable,
   profileTable,
   userTable,
 } from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, like, lt, or, SQL } from 'drizzle-orm';
+import { and, desc, eq, gt, like, lt, not, or, sql, SQL } from 'drizzle-orm';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 
@@ -25,7 +26,18 @@ export class ChatService {
         secondUser: dto.targetId,
       })
       .$returningId();
-    return Result.ok('This action adds a new chat', id);
+
+    await this.db.insert(channelLastSeenTable).values([
+      {
+        channelId: id,
+        userId: dto.targetId,
+      },
+      {
+        channelId: id,
+        userId: requesterId,
+      },
+    ]);
+    return Result.ok('Created new chat channel', id);
   }
 
   async getAll(chatQuery: ChatQuery, requesterId: number) {
@@ -59,6 +71,33 @@ export class ChatService {
         .orderBy(desc(chatMessageTable.sentAt))
         .limit(1)
         .as('last_message');
+
+    const getLastSeen = this.db
+        .select({
+          channelId: channelLastSeenTable.channelId,
+          lastSeenAt: channelLastSeenTable.lastSeenAt,
+        })
+        .from(channelLastSeenTable)
+        .where(eq(channelLastSeenTable.userId, requesterId))
+        .as('ls'),
+      newMessageCount = this.db
+        .select({
+          channelId: chatMessageTable.channelId,
+          count: sql<number>`(count(1))`.as('count'),
+        })
+        .from(chatMessageTable)
+        .innerJoin(
+          getLastSeen,
+          eq(getLastSeen.channelId, chatMessageTable.channelId),
+        )
+        .where(
+          and(
+            gt(chatMessageTable.sentAt, getLastSeen.lastSeenAt),
+            not(eq(chatMessageTable.userId, requesterId)),
+          ),
+        )
+        .groupBy(chatMessageTable.channelId)
+        .as('mc');
 
     const andQueries: SQL[] = [];
     if (chatQuery.username) {
@@ -98,9 +137,14 @@ export class ChatService {
         },
         lastMessage: lastMessage.content,
         lastSentAt: lastMessage.sentAt,
+        newMessageCount: sql<number>`(ifnull(${newMessageCount.count}, 0))`,
         dateCreated: chatChannelTable.dateCreated,
       })
       .from(chatChannelTable)
+      .leftJoin(
+        newMessageCount,
+        eq(newMessageCount.channelId, chatChannelTable.id),
+      )
       .leftJoin(firstUser, eq(firstUser.id, chatChannelTable.firstUser))
       .leftJoin(secondUser, eq(secondUser.id, chatChannelTable.secondUser))
       .leftJoin(lastMessage, eq(lastMessage.channelId, chatChannelTable.id))
@@ -215,6 +259,18 @@ export class ChatService {
       .orderBy(desc(chatMessageTable.sentAt))
       .limit(messageQuery.size);
     return Result.ok(`Fetched chat messages successfully`, res);
+  }
+
+  async updateLastSeen(channelId: number, userId: number) {
+    await this.db
+      .update(channelLastSeenTable)
+      .set({ lastSeenAt: sql`(now())` })
+      .where(
+        and(
+          eq(channelLastSeenTable.channelId, channelId),
+          eq(channelLastSeenTable.userId, userId),
+        ),
+      );
   }
 
   remove(id: number) {
