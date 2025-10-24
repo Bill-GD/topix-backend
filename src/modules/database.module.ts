@@ -10,7 +10,7 @@ import * as mysql from 'mysql2/promise';
   providers: [
     {
       provide: DatabaseProviderKey,
-      useFactory: async (): Promise<DBType> => {
+      useFactory: (): DBType => {
         const poolConnection = mysql.createPool({
           host: String(process.env.DATABASE_HOST),
           user: String(process.env.DATABASE_USER),
@@ -18,7 +18,10 @@ import * as mysql from 'mysql2/promise';
           database: String(process.env.DATABASE_NAME),
         });
 
-        await poolConnection.query("SET time_zone = '+00:00'");
+        poolConnection.on('connection', (conn) => {
+          conn.query("SET time_zone = '+00:00'");
+        });
+        // await poolConnection.query("SET time_zone = '+00:00'");
 
         return drizzle(poolConnection, {
           schema,
