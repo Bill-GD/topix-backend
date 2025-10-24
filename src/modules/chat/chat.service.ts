@@ -9,7 +9,7 @@ import {
   userTable,
 } from '@/database/schemas';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, like, or, SQL } from 'drizzle-orm';
+import { and, desc, eq, like, lt, or, SQL } from 'drizzle-orm';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 
@@ -206,10 +206,14 @@ export class ChatService {
       .from(chatMessageTable)
       .innerJoin(userTable, eq(userTable.id, chatMessageTable.userId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-      .where(eq(chatMessageTable.channelId, channelId))
+      .where(
+        and(
+          eq(chatMessageTable.channelId, channelId),
+          lt(chatMessageTable.sentAt, new Date(messageQuery.timestamp)),
+        ),
+      )
       .orderBy(desc(chatMessageTable.sentAt))
-      .limit(messageQuery.limit)
-      .offset(messageQuery.offset);
+      .limit(messageQuery.size);
     return Result.ok(`Fetched chat messages successfully`, res);
   }
 
