@@ -9,14 +9,112 @@ import {
   profileTable,
   userTable,
 } from '@/database/schemas';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { and, desc, eq, gt, like, lt, not, or, sql, SQL } from 'drizzle-orm';
+import { MySqlColumn, SubqueryWithSelection } from 'drizzle-orm/mysql-core';
 import { ChatMessageDto } from './dto/chat-message.dto';
 import { CreateChatChannelDto } from './dto/create-chat-channel.dto';
 
+type ChatChannelUser = {
+  id: MySqlColumn<{
+    name: 'id';
+    tableName: 'user';
+    dataType: 'number';
+    columnType: 'MySqlInt';
+    data: number;
+    driverParam: string | number;
+    notNull: true;
+    hasDefault: true;
+    isPrimaryKey: true;
+    isAutoincrement: true;
+    hasRuntimeDefault: false;
+    enumValues: undefined;
+    baseColumn: never;
+    identity: undefined;
+    generated: undefined;
+  }>;
+  username: MySqlColumn<{
+    name: 'username';
+    tableName: 'user';
+    dataType: 'string';
+    columnType: 'MySqlVarChar';
+    data: string;
+    driverParam: string | number;
+    notNull: true;
+    hasDefault: false;
+    isPrimaryKey: false;
+    isAutoincrement: false;
+    hasRuntimeDefault: false;
+    enumValues: [string, ...string[]];
+    baseColumn: never;
+    identity: undefined;
+    generated: undefined;
+  }>;
+  displayName: MySqlColumn<{
+    name: 'display_name';
+    tableName: 'profile';
+    dataType: 'string';
+    columnType: 'MySqlVarChar';
+    data: string;
+    driverParam: string | number;
+    notNull: true;
+    hasDefault: false;
+    isPrimaryKey: false;
+    isAutoincrement: false;
+    hasRuntimeDefault: false;
+    enumValues: [string, ...string[]];
+    baseColumn: never;
+    identity: undefined;
+    generated: undefined;
+  }>;
+  profilePicture: MySqlColumn<{
+    name: 'profile_picture';
+    tableName: 'profile';
+    dataType: 'string';
+    columnType: 'MySqlText';
+    data: string;
+    driverParam: string;
+    notNull: false;
+    hasDefault: false;
+    isPrimaryKey: false;
+    isAutoincrement: false;
+    hasRuntimeDefault: false;
+    enumValues: [string, ...string[]];
+    baseColumn: never;
+    identity: undefined;
+    generated: undefined;
+  }>;
+};
+
 @Injectable()
-export class ChatService {
+export class ChatService implements OnModuleInit {
+  private firstUser: SubqueryWithSelection<ChatChannelUser, 'first_user'>;
+  private secondUser: SubqueryWithSelection<ChatChannelUser, 'second_user'>;
+
   constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
+
+  onModuleInit() {
+    this.firstUser = this.db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        displayName: profileTable.displayName,
+        profilePicture: profileTable.profilePicture,
+      })
+      .from(userTable)
+      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .as('first_user');
+    this.secondUser = this.db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        displayName: profileTable.displayName,
+        profilePicture: profileTable.profilePicture,
+      })
+      .from(userTable)
+      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .as('second_user');
+  }
 
   async createChannel(dto: CreateChatChannelDto, requesterId: number) {
     const [{ id }] = await this.db
@@ -41,36 +139,16 @@ export class ChatService {
   }
 
   async getAll(chatQuery: ChatQuery, requesterId: number) {
-    const firstUser = this.db
-        .select({
-          id: userTable.id,
-          username: userTable.username,
-          displayName: profileTable.displayName,
-          profilePicture: profileTable.profilePicture,
-        })
-        .from(userTable)
-        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-        .as('first_user'),
-      secondUser = this.db
-        .select({
-          id: userTable.id,
-          username: userTable.username,
-          displayName: profileTable.displayName,
-          profilePicture: profileTable.profilePicture,
-        })
-        .from(userTable)
-        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-        .as('second_user'),
-      lastMessage = this.db
-        .select({
-          channelId: chatMessageTable.channelId,
-          content: chatMessageTable.content,
-          sentAt: chatMessageTable.sentAt,
-        })
-        .from(chatMessageTable)
-        .orderBy(desc(chatMessageTable.sentAt))
-        .limit(1)
-        .as('last_message');
+    const lastMessage = this.db
+      .select({
+        channelId: chatMessageTable.channelId,
+        content: chatMessageTable.content,
+        sentAt: chatMessageTable.sentAt,
+      })
+      .from(chatMessageTable)
+      .orderBy(desc(chatMessageTable.sentAt))
+      .limit(1)
+      .as('last_message');
 
     const getLastSeen = this.db
         .select({
@@ -104,8 +182,8 @@ export class ChatService {
       andQueries.push(
         <SQL<unknown>>(
           or(
-            like(firstUser.displayName, `%${chatQuery.username}%`),
-            like(secondUser.displayName, `%${chatQuery.username}%`),
+            like(this.firstUser.displayName, `%${chatQuery.username}%`),
+            like(this.secondUser.displayName, `%${chatQuery.username}%`),
           )
         ),
       );
@@ -124,16 +202,16 @@ export class ChatService {
       .select({
         id: chatChannelTable.id,
         firstUser: {
-          id: firstUser.id,
-          username: firstUser.username,
-          displayName: firstUser.displayName,
-          profilePicture: firstUser.profilePicture,
+          id: this.firstUser.id,
+          username: this.firstUser.username,
+          displayName: this.firstUser.displayName,
+          profilePicture: this.firstUser.profilePicture,
         },
         secondUser: {
-          id: secondUser.id,
-          username: secondUser.username,
-          displayName: secondUser.displayName,
-          profilePicture: secondUser.profilePicture,
+          id: this.secondUser.id,
+          username: this.secondUser.username,
+          displayName: this.secondUser.displayName,
+          profilePicture: this.secondUser.profilePicture,
         },
         lastMessage: lastMessage.content,
         lastSentAt: lastMessage.sentAt,
@@ -145,8 +223,14 @@ export class ChatService {
         newMessageCount,
         eq(newMessageCount.channelId, chatChannelTable.id),
       )
-      .leftJoin(firstUser, eq(firstUser.id, chatChannelTable.firstUser))
-      .leftJoin(secondUser, eq(secondUser.id, chatChannelTable.secondUser))
+      .leftJoin(
+        this.firstUser,
+        eq(this.firstUser.id, chatChannelTable.firstUser),
+      )
+      .leftJoin(
+        this.secondUser,
+        eq(this.secondUser.id, chatChannelTable.secondUser),
+      )
       .leftJoin(lastMessage, eq(lastMessage.channelId, chatChannelTable.id))
       .where(and(...andQueries))
       .orderBy(desc(chatChannelTable.dateCreated), desc(lastMessage.sentAt))
@@ -156,48 +240,32 @@ export class ChatService {
   }
 
   async getChannel(channelId: number) {
-    const firstUser = this.db
-        .select({
-          id: userTable.id,
-          username: userTable.username,
-          displayName: profileTable.displayName,
-          profilePicture: profileTable.profilePicture,
-        })
-        .from(userTable)
-        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-        .as('first_user'),
-      secondUser = this.db
-        .select({
-          id: userTable.id,
-          username: userTable.username,
-          displayName: profileTable.displayName,
-          profilePicture: profileTable.profilePicture,
-        })
-        .from(userTable)
-        .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
-        .as('second_user');
-
     const res = await this.db
       .select({
         id: chatChannelTable.id,
         firstUser: {
-          id: firstUser.id,
-          username: firstUser.username,
-          displayName: firstUser.displayName,
-          profilePicture: firstUser.profilePicture,
+          id: this.firstUser.id,
+          username: this.firstUser.username,
+          displayName: this.firstUser.displayName,
+          profilePicture: this.firstUser.profilePicture,
         },
         secondUser: {
-          id: secondUser.id,
-          username: secondUser.username,
-          displayName: secondUser.displayName,
-          profilePicture: secondUser.profilePicture,
+          id: this.secondUser.id,
+          username: this.secondUser.username,
+          displayName: this.secondUser.displayName,
+          profilePicture: this.secondUser.profilePicture,
         },
       })
       .from(chatChannelTable)
-      .leftJoin(firstUser, eq(firstUser.id, chatChannelTable.firstUser))
-      .leftJoin(secondUser, eq(secondUser.id, chatChannelTable.secondUser))
+      .leftJoin(
+        this.firstUser,
+        eq(this.firstUser.id, chatChannelTable.firstUser),
+      )
+      .leftJoin(
+        this.secondUser,
+        eq(this.secondUser.id, chatChannelTable.secondUser),
+      )
       .where(eq(chatChannelTable.id, channelId))
-      // join more to get both users
       .limit(1);
 
     if (res.length !== 1) return Result.fail('Channel not found');
@@ -248,8 +316,8 @@ export class ChatService {
         sentAt: chatMessageTable.sentAt,
       })
       .from(chatMessageTable)
-      .innerJoin(userTable, eq(userTable.id, chatMessageTable.userId))
-      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .leftJoin(userTable, eq(userTable.id, chatMessageTable.userId))
+      .leftJoin(profileTable, eq(profileTable.userId, userTable.id))
       .where(
         and(
           eq(chatMessageTable.channelId, channelId),
@@ -273,7 +341,16 @@ export class ChatService {
       );
   }
 
-  async remove(id: number) {
-    await this.db.delete(chatMessageTable).where(eq(chatMessageTable.id, id));
+  async remove(messageId: number) {
+    await this.db
+      .delete(chatMessageTable)
+      .where(eq(chatMessageTable.id, messageId));
+  }
+
+  async removeChannel(channelId: number) {
+    await this.db
+      .delete(chatChannelTable)
+      .where(eq(chatChannelTable.id, channelId));
+    return Result.ok(`Deleted chat channel successfully`, null);
   }
 }

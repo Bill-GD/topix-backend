@@ -55,9 +55,7 @@ export class ChatGateway {
     @MessageBody() dto: ChatMessageDto,
   ) {
     const res = await this.chatService.addMessage(dto, requesterId);
-    // await this.chatService.updateLastSeen(dto.channelId, requesterId);
     this.server.to(getChatChannelId(dto.channelId)).emit('send', res.data);
-    // return res.data;
     return 1;
   }
 
