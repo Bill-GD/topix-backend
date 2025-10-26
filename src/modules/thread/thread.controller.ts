@@ -9,6 +9,7 @@ import { FileSizeValidatorPipe } from '@/common/pipes';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
+import { NotificationService } from '@/modules/notification/notification.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
 import { UpdateThreadDto } from '@/modules/thread/dto/update-thread.dto';
@@ -37,7 +38,10 @@ import { ThreadService } from './thread.service';
 @UseGuards(AuthenticatedGuard)
 @ApiController()
 export class ThreadController {
-  constructor(private readonly threadService: ThreadService) {}
+  constructor(
+    private readonly threadService: ThreadService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   @Get()
   @UseGuards(GetRequesterGuard)
@@ -94,6 +98,17 @@ export class ThreadController {
   ) {
     if (files) dto.fileObjects = files;
     const res = await this.threadService.addPost(threadId, requesterId, dto);
+
+    const { data: followers } = await this.threadService.getFollowers(threadId);
+
+    for (const id of followers) {
+      await this.notificationService.create({
+        actorId: requesterId,
+        type: 'update_thread',
+        receiverId: id,
+        objectId: threadId,
+      });
+    }
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 

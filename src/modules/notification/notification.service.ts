@@ -2,12 +2,7 @@ import { CommonQuery } from '@/common/queries/common.query';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
-import {
-  chatMessageTable,
-  notificationTable,
-  profileTable,
-  userTable,
-} from '@/database/schemas';
+import { notificationTable, profileTable, userTable } from '@/database/schemas';
 import { NotificationDto } from '@/modules/notification/dto/notification.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, like, lt, sql } from 'drizzle-orm';
@@ -41,15 +36,15 @@ export class NotificationService {
         actionType: dto.type,
         objectId: dto.objectId,
       });
+    } else if (noti.actorId !== dto.actorId) {
+      await this.db
+        .update(notificationTable)
+        .set({
+          actorCount: sql`${notificationTable.actorCount} + 1`,
+          dateCreated: sql`(now())`,
+        })
+        .where(eq(notificationTable.id, noti.id));
     }
-
-    await this.db
-      .update(notificationTable)
-      .set({
-        actorCount: sql`${notificationTable.actorCount} + 1`,
-        dateCreated: sql`(now())`,
-      })
-      .where(eq(notificationTable.id, noti!.id));
   }
 
   async getAll(notiQuery: CommonQuery, requesterId: number) {
@@ -78,14 +73,19 @@ export class NotificationService {
   }
 
   async count(requesterId: number) {
-    const res = await this.db.$count(
-      notificationTable,
-      and(
-        eq(notificationTable.receiverId, requesterId),
-        lt(userTable.notificationLastSeenAt, chatMessageTable.sentAt),
-      ),
-    );
-    return Result.ok('Fetched notification count', res);
+    const [{ count }] = await this.db
+      .select({
+        count: sql<number>`(count(1))`,
+      })
+      .from(notificationTable)
+      .innerJoin(userTable, eq(userTable.id, notificationTable.receiverId))
+      .where(
+        and(
+          eq(notificationTable.receiverId, requesterId),
+          lt(userTable.notificationLastSeenAt, notificationTable.dateCreated),
+        ),
+      );
+    return Result.ok('Fetched notification count', count);
   }
 
   async updateLastSeen(userId: number) {
