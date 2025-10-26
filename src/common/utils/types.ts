@@ -43,3 +43,6 @@ export const NotificationActions = {
   updateThread: 'update_thread',
   follow: 'follow',
 } as const;
+
+export type NotificationTypes =
+  (typeof NotificationActions)[keyof typeof NotificationActions];

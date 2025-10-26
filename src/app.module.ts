@@ -7,6 +7,7 @@ import { DatabaseModule } from '@/modules/database.module';
 import { FileModule } from '@/modules/file/file.module';
 import { GroupModule } from '@/modules/group/group.module';
 import { MailerModule } from '@/modules/mailer/mailer.module';
+import { NotificationModule } from '@/modules/notification/notification.module';
 import { PostModule } from '@/modules/post/post.module';
 import { ThreadModule } from '@/modules/thread/thread.module';
 import { UserModule } from '@/modules/user/user.module';
@@ -33,6 +34,7 @@ import * as process from 'node:process';
     ThreadModule,
     GroupModule,
     ChatModule,
+    NotificationModule,
   ],
   providers: [],
 })
