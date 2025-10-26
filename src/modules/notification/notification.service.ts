@@ -10,7 +10,7 @@ import {
 } from '@/database/schemas';
 import { NotificationDto } from '@/modules/notification/dto/notification.dto';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, like, lt, sql } from 'drizzle-orm';
 
 @Injectable()
 export class NotificationService {
@@ -21,15 +21,21 @@ export class NotificationService {
       .select()
       .from(notificationTable)
       .where(
-        eq(
+        like(
           notificationTable.id,
-          `${dto.receiverId}:${dto.type}:${dto.objectId}`,
+          `${dto.receiverId}:${dto.type}:${dto.objectId}:%`,
         ),
-      );
+      )
+      .orderBy(desc(notificationTable.dateCreated));
 
-    if (res.length <= 0) {
+    const noti = res.at(0);
+
+    if (
+      !noti ||
+      (noti && Date.now() - Number(noti.id.split(':').at(-1)) >= 432000000) // 5 days
+    ) {
       await this.db.insert(notificationTable).values({
-        id: `${dto.receiverId}:${dto.type}:${dto.objectId}`,
+        id: `${dto.receiverId}:${dto.type}:${dto.objectId}:${Date.now()}`,
         receiverId: dto.receiverId,
         actorId: dto.actorId,
         actionType: dto.type,
@@ -37,15 +43,13 @@ export class NotificationService {
       });
     }
 
-    const noti = res[0];
-
     await this.db
       .update(notificationTable)
       .set({
         actorCount: sql`${notificationTable.actorCount} + 1`,
         dateCreated: sql`(now())`,
       })
-      .where(eq(notificationTable.id, noti.id));
+      .where(eq(notificationTable.id, noti!.id));
   }
 
   async getAll(notiQuery: CommonQuery, requesterId: number) {
