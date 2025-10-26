@@ -2,7 +2,13 @@ import { CommonQuery } from '@/common/queries/common.query';
 import { DatabaseProviderKey } from '@/common/utils/constants';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
-import { notificationTable, profileTable, userTable } from '@/database/schemas';
+import {
+  notificationTable,
+  postTable,
+  profileTable,
+  threadTable,
+  userTable,
+} from '@/database/schemas';
 import { NotificationDto } from '@/modules/notification/dto/notification.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, like, lt, sql } from 'drizzle-orm';
@@ -61,10 +67,14 @@ export class NotificationService {
         type: notificationTable.actionType,
         objectId: notificationTable.objectId,
         dateCreated: notificationTable.dateCreated,
+        postContent: postTable.content,
+        threadTitle: threadTable.title,
       })
       .from(notificationTable)
       .innerJoin(userTable, eq(userTable.id, notificationTable.actorId))
       .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .leftJoin(postTable, eq(postTable.id, notificationTable.objectId))
+      .leftJoin(threadTable, eq(threadTable.id, notificationTable.objectId))
       .where(eq(notificationTable.receiverId, requesterId))
       .orderBy(desc(notificationTable.dateCreated))
       .limit(notiQuery.limit)
