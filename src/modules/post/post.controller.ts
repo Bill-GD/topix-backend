@@ -11,6 +11,8 @@ import { PostQuery } from '@/common/queries';
 import { CommonQuery } from '@/common/queries/common.query';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
+import { NotificationDto } from '@/modules/notification/dto/notification.dto';
+import { EventService } from '@/modules/notification/event.service';
 import { NotificationService } from '@/modules/notification/notification.service';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import {
@@ -42,6 +44,7 @@ export class PostController {
   constructor(
     private readonly postService: PostService,
     private readonly notificationService: NotificationService,
+    private readonly eventService: EventService,
   ) {}
 
   @Post()
@@ -133,12 +136,15 @@ export class PostController {
         owner: { id: ownerId },
       },
     } = await this.postService.getOne(postId, requesterId);
-    await this.notificationService.create({
+
+    const notifDto: NotificationDto = {
       actorId: requesterId,
-      type: 'react',
+      actionType: 'react',
       receiverId: ownerId,
       objectId: postId,
-    });
+    };
+    await this.notificationService.create(notifDto);
+    await this.notificationService.emitNotification([notifDto]);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

@@ -13,6 +13,11 @@ export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const response = context.switchToHttp().getResponse<Response>();
 
+    // ignore sse
+    if (response.getHeader('Content-Type') === 'text/event-stream') {
+      return next.handle();
+    }
+
     return next.handle().pipe(
       map((res) => {
         const typed = res as ControllerResponse;

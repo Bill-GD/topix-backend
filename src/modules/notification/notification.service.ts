@@ -10,12 +10,17 @@ import {
   userTable,
 } from '@/database/schemas';
 import { NotificationDto } from '@/modules/notification/dto/notification.dto';
+import { EventService } from '@/modules/notification/event.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, desc, eq, like, lt, sql } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm/sql/expressions/conditions';
 
 @Injectable()
 export class NotificationService {
-  constructor(@Inject(DatabaseProviderKey) private readonly db: DBType) {}
+  constructor(
+    @Inject(DatabaseProviderKey) private readonly db: DBType,
+    private readonly eventService: EventService,
+  ) {}
 
   async create(dto: NotificationDto) {
     const res = await this.db
@@ -24,7 +29,7 @@ export class NotificationService {
       .where(
         like(
           notificationTable.id,
-          `${dto.receiverId}:${dto.type}:${dto.objectId}:%`,
+          `${dto.receiverId}:${dto.actionType}:${dto.objectId}:%`,
         ),
       )
       .orderBy(desc(notificationTable.dateCreated));
@@ -36,10 +41,10 @@ export class NotificationService {
       (noti && Date.now() - Number(noti.id.split(':').at(-1)) >= 432000000) // 5 days
     ) {
       await this.db.insert(notificationTable).values({
-        id: `${dto.receiverId}:${dto.type}:${dto.objectId}:${Date.now()}`,
+        id: `${dto.receiverId}:${dto.actionType}:${dto.objectId}:${Date.now()}`,
         receiverId: dto.receiverId,
         actorId: dto.actorId,
-        actionType: dto.type,
+        actionType: dto.actionType,
         objectId: dto.objectId,
       });
     } else if (noti.actorId !== dto.actorId) {
@@ -50,6 +55,30 @@ export class NotificationService {
           dateCreated: sql`(now())`,
         })
         .where(eq(notificationTable.id, noti.id));
+    }
+  }
+
+  async emitNotification(dtos: NotificationDto[]) {
+    const actorIds = dtos.map((e) => e.actorId);
+    const users = await this.db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        displayName: profileTable.displayName,
+        profilePicture: profileTable.profilePicture,
+      })
+      .from(userTable)
+      .innerJoin(profileTable, eq(profileTable.userId, userTable.id))
+      .where(inArray(userTable.id, actorIds));
+
+    for (const dto of dtos) {
+      this.eventService.emit({
+        id: `${dto.receiverId}:${dto.actionType}:${dto.objectId}:${Date.now()}`,
+        receiverId: dto.receiverId,
+        actor: users.find((e) => e.id === dto.actorId)!,
+        actionType: dto.actionType,
+        objectId: dto.objectId,
+      });
     }
   }
 
@@ -64,7 +93,7 @@ export class NotificationService {
           profilePicture: profileTable.profilePicture,
         },
         actorCount: notificationTable.actorCount,
-        type: notificationTable.actionType,
+        actionType: notificationTable.actionType,
         objectId: notificationTable.objectId,
         dateCreated: notificationTable.dateCreated,
         postContent: postTable.content,

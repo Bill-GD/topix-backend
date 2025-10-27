@@ -9,6 +9,7 @@ import { FileSizeValidatorPipe } from '@/common/pipes';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
+import { NotificationDto } from '@/modules/notification/dto/notification.dto';
 import { NotificationService } from '@/modules/notification/notification.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
@@ -100,15 +101,17 @@ export class ThreadController {
     const res = await this.threadService.addPost(threadId, requesterId, dto);
 
     const { data: followers } = await this.threadService.getFollowers(threadId);
+    const dtos: NotificationDto[] = followers.map((id) => ({
+      actorId: requesterId,
+      actionType: 'update_thread',
+      receiverId: id,
+      objectId: threadId,
+    }));
 
-    for (const id of followers) {
-      await this.notificationService.create({
-        actorId: requesterId,
-        type: 'update_thread',
-        receiverId: id,
-        objectId: threadId,
-      });
+    for (const dto of dtos) {
+      await this.notificationService.create(dto);
     }
+    await this.notificationService.emitNotification(dtos);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 

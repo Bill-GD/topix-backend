@@ -14,7 +14,7 @@ export class NotificationDto {
 
   @ApiProperty()
   @IsEnum(NotificationActions)
-  type: NotificationTypes;
+  actionType: NotificationTypes;
 
   @ApiProperty()
   @IsPositiveNumber()

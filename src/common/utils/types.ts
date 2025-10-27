@@ -14,6 +14,13 @@ export type JwtUserPayload = {
   type: 'access' | 'refresh';
 };
 
+export interface SSEMessageEvent {
+  data: string | object;
+  id?: string;
+  type?: string;
+  retry?: number;
+}
+
 export const VisibilityTypes = {
   public: 'public',
   private: 'private',
