@@ -11,6 +11,9 @@ import { PostQuery } from '@/common/queries';
 import { CommonQuery } from '@/common/queries/common.query';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
+import { NotificationDto } from '@/modules/notification/dto/notification.dto';
+import { EventService } from '@/modules/notification/event.service';
+import { NotificationService } from '@/modules/notification/notification.service';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import {
   Body,
@@ -38,7 +41,11 @@ import { PostService } from './post.service';
 @UseGuards(AuthenticatedGuard)
 @ApiController()
 export class PostController {
-  constructor(private readonly postService: PostService) {}
+  constructor(
+    private readonly postService: PostService,
+    private readonly notificationService: NotificationService,
+    private readonly eventService: EventService,
+  ) {}
 
   @Post()
   @UseGuards(GetRequesterGuard)
@@ -124,6 +131,20 @@ export class PostController {
     @Body() dto: ReactDto,
   ) {
     const res = await this.postService.updateReaction(postId, requesterId, dto);
+    const {
+      data: {
+        owner: { id: ownerId },
+      },
+    } = await this.postService.getOne(postId, requesterId);
+
+    const dto: NotificationDto = {
+      actorId: requesterId,
+      actionType: 'react',
+      receiverId: ownerId,
+      objectId: postId,
+    };
+    await this.notificationService.create(dto);
+    await this.notificationService.emitNotification([dto]);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

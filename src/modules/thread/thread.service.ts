@@ -154,6 +154,17 @@ export class ThreadService {
     return Result.ok('Deleted thread successfully.', null);
   }
 
+  async getFollowers(threadId: number) {
+    const res = await this.db
+      .select()
+      .from(threadFollowTable)
+      .where(eq(threadFollowTable.threadId, threadId));
+    return Result.ok(
+      'Fetched follower IDs successfully.',
+      res.map((e) => e.userId),
+    );
+  }
+
   private getThreadQuery(requesterId: number) {
     return this.db
       .select({

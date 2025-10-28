@@ -1,14 +1,14 @@
 import { UserRoles } from '@/common/utils/types';
-import { autoId, timestamps, Tables } from '@/database/utils';
+import { autoId, Tables, timestamps } from '@/database/utils';
 import {
-  int,
-  mysqlTable,
-  varchar,
-  mysqlEnum,
-  text,
-  primaryKey,
   boolean,
+  int,
+  mysqlEnum,
+  mysqlTable,
+  primaryKey,
+  text,
   timestamp,
+  varchar,
 } from 'drizzle-orm/mysql-core';
 
 export const userTable = mysqlTable(Tables.user, {
@@ -18,6 +18,7 @@ export const userTable = mysqlTable(Tables.user, {
   password: varchar({ length: 60 }).notNull(),
   verified: boolean().notNull().default(false),
   role: mysqlEnum(UserRoles).notNull().default(UserRoles.user),
+  notificationLastSeenAt: timestamps.dateCreated('notification_last_seen_at'),
   dateCreated: timestamps.dateCreated(),
   dateUpdated: timestamps.dateUpdated(),
 });

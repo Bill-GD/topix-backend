@@ -21,7 +21,6 @@ import * as mysql from 'mysql2/promise';
         poolConnection.on('connection', (conn) => {
           conn.query("SET time_zone = '+00:00'");
         });
-        // await poolConnection.query("SET time_zone = '+00:00'");
 
         return drizzle(poolConnection, {
           schema,

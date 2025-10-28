@@ -10,6 +10,8 @@ import { FileSizeValidatorPipe } from '@/common/pipes';
 import { UserQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
+import { NotificationDto } from '@/modules/notification/dto/notification.dto';
+import { NotificationService } from '@/modules/notification/notification.service';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { UserService } from '@/modules/user/user.service';
 import {
@@ -37,7 +39,10 @@ import { Response } from 'express';
 @UseGuards(AuthenticatedGuard)
 @ApiController()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   @Get()
   @UseGuards(AuthenticatedGuard, GetRequesterGuard, IsAdminGuard)
@@ -90,6 +95,15 @@ export class UserController {
     if (!res.success) {
       return ControllerResponse.fail(new ConflictException(res.message));
     }
+
+    const dto: NotificationDto = {
+      actorId: requesterId,
+      actionType: 'follow',
+      receiverId: userId,
+      objectId: userId,
+    };
+    await this.notificationService.create(dto);
+    await this.notificationService.emitNotification([dto]);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 

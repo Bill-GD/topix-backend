@@ -14,6 +14,13 @@ export type JwtUserPayload = {
   type: 'access' | 'refresh';
 };
 
+export interface SSEMessageEvent {
+  data: string | object;
+  id?: string;
+  type?: string;
+  retry?: number;
+}
+
 export const VisibilityTypes = {
   public: 'public',
   private: 'private',
@@ -43,3 +50,6 @@ export const NotificationActions = {
   updateThread: 'update_thread',
   follow: 'follow',
 } as const;
+
+export type NotificationTypes =
+  (typeof NotificationActions)[keyof typeof NotificationActions];

@@ -1,11 +1,11 @@
 import { NotificationActions } from '@/common/utils/types';
 import { userTable } from '@/database/schemas/user.schema';
-import { timestamps, Tables } from '@/database/utils';
+import { Tables, timestamps } from '@/database/utils';
 import { int, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
 import { mysqlEnum } from 'drizzle-orm/mysql-core/columns/enum';
 
 export const notificationTable = mysqlTable(Tables.notification, {
-  id: varchar({ length: 255 }).primaryKey(), // <receiverId>:<actionType>:<objectId>
+  id: varchar({ length: 255 }).primaryKey(), // <receiverId>:<actionType>:<objectId>:<at>
   receiverId: int('receiver_id').references(() => userTable.id, {
     onDelete: 'cascade',
   }),
