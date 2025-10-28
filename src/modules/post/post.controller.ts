@@ -137,14 +137,14 @@ export class PostController {
       },
     } = await this.postService.getOne(postId, requesterId);
 
-    const dto: NotificationDto = {
+    const notiDto: NotificationDto = {
       actorId: requesterId,
       actionType: 'react',
       receiverId: ownerId,
       objectId: postId,
     };
-    await this.notificationService.create(dto);
-    await this.notificationService.emitNotification([dto]);
+    await this.notificationService.create(notiDto);
+    await this.notificationService.emitNotification([notiDto]);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
