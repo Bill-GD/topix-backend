@@ -28,10 +28,19 @@ export class AuthService {
         email: dto.email,
         username: dto.username,
         password: dto.password,
+        verified: dto.verified,
       })
       .$returningId();
 
-    await this.sendOTP(newId, dto);
+    if (dto.verified) {
+      await this.db.insert(profileTable).values({
+        userId: newId,
+        displayName: dto.username,
+        profilePicture: dto.profilePictureUrl,
+      });
+    } else {
+      await this.sendOTP(newId, dto);
+    }
     return newId;
   }
 

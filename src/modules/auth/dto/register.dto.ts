@@ -1,6 +1,14 @@
-import { IsNotEmptyString } from '@/common/decorators';
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, Length, NotContains } from 'class-validator';
+import { IsNotEmptyString, IsOptionalString } from '@/common/decorators';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  Length,
+  NotContains,
+} from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'example@gmail.com' })
@@ -31,4 +39,15 @@ export class RegisterDto {
   })
   @IsNotEmptyString()
   confirmPassword: string;
+
+  @ApiHideProperty()
+  @Type(() => String)
+  @Transform(({ value }) => (value as string).toLowerCase() === 'true')
+  @IsBoolean()
+  @IsOptional()
+  verified: boolean = false;
+
+  @ApiHideProperty()
+  @IsOptionalString()
+  profilePictureUrl?: string;
 }
