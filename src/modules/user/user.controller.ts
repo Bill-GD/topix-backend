@@ -36,7 +36,7 @@ import {
 import { Response } from 'express';
 
 @Controller('user')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedGuard, GetRequesterGuard)
 @ApiController()
 export class UserController {
   constructor(
@@ -45,7 +45,7 @@ export class UserController {
   ) {}
 
   @Get()
-  @UseGuards(AuthenticatedGuard, GetRequesterGuard, IsAdminGuard)
+  @UseGuards(IsAdminGuard)
   async getAll(
     @Res({ passthrough: true }) response: Response,
     @Query() query: UserQuery,
@@ -56,7 +56,6 @@ export class UserController {
   }
 
   @Get('me')
-  @UseGuards(GetRequesterGuard)
   async getSelf(@RequesterID() requesterId: number) {
     const user = await this.userService.getUserById(requesterId);
 
@@ -68,7 +67,7 @@ export class UserController {
   }
 
   @Get(':username')
-  @UseGuards(UserExistGuard('username'), GetRequesterGuard)
+  @UseGuards(UserExistGuard('username'))
   async getUser(
     @Param('username') username: string,
     @RequesterID() requesterId: number,
@@ -86,7 +85,7 @@ export class UserController {
   }
 
   @Post(':id/follow')
-  @UseGuards(UserExistGuard('id'), GetRequesterGuard)
+  @UseGuards(UserExistGuard('id'))
   async followUser(
     @Param('id', ParseIntPipe) userId: number,
     @RequesterID() requesterId: number,
@@ -108,7 +107,6 @@ export class UserController {
   }
 
   @Patch('me')
-  @UseGuards(GetRequesterGuard)
   @ApiFile('profilePicture', UpdateProfileDto, 'single')
   async updateProfile(
     @RequesterID() requesterId: number,
@@ -138,7 +136,7 @@ export class UserController {
   }
 
   @Delete(':id/follow')
-  @UseGuards(UserExistGuard('id'), GetRequesterGuard)
+  @UseGuards(UserExistGuard('id'))
   async unfollowUser(
     @Param('id', ParseIntPipe) userId: number,
     @RequesterID() requesterId: number,
