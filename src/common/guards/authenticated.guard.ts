@@ -27,12 +27,12 @@ export class AuthenticatedGuard implements CanActivate {
     try {
       const token = this.jwt.verify<JwtUserPayload>(authToken);
       if (token.type !== 'access') {
-        throw new JsonWebTokenError('Invalid token provided.');
+        throw new UnauthorizedException('Invalid token provided.');
       }
     } catch (err) {
-      if (err instanceof JsonWebTokenError) {
-        throw new UnauthorizedException(err.message);
-      }
+      throw err instanceof JsonWebTokenError
+        ? new UnauthorizedException(err.message)
+        : err;
     }
 
     return true;

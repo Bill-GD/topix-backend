@@ -3,7 +3,9 @@ import { CryptoModule } from '@/modules/crypto/crypto.module';
 import { DatabaseModule } from '@/modules/database.module';
 import { FileModule } from '@/modules/file/file.module';
 import { MailerModule } from '@/modules/mailer/mailer.module';
+import { CanActivate } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { Request } from 'express';
 import * as process from 'node:process';
 
 export function getGlobalModules() {
@@ -19,3 +21,16 @@ export function getGlobalModules() {
     CryptoModule,
   ];
 }
+
+export const defaultGuardMock = {
+  canActivate: jest.fn(() => true),
+};
+
+export const getRequesterGuardMock: CanActivate = {
+  canActivate: jest.fn((context) => {
+    const req = context.switchToHttp().getRequest<Request>();
+    req.userId = 1;
+    req.userRole = 'user';
+    return true;
+  }),
+};

@@ -98,11 +98,7 @@ export class AuthController {
   @UseGuards(AccountInfoGuard(true, ['username']))
   async login(@Body() dto: LoginDto) {
     const res = await this.authService.login(dto);
-
-    if (!res.success) {
-      throw new UnauthorizedException(res.message);
-    }
-
+    if (!res.success) throw new UnauthorizedException(res.message);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 }
