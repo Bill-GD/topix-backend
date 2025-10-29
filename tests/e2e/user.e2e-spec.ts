@@ -1,36 +1,28 @@
-import { AppModule } from '@/app.module';
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import { UserModule } from '@/modules/user/user.module';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as dotenv from 'dotenv';
+import { NextFunction, Request, Response } from 'express';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
-
-dotenv.config({ path: '.env', quiet: true });
+import { getGlobalModules } from './test-helper';
 
 describe('User (e2e)', () => {
   let app: INestApplication<App>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      imports: [UserModule, ...getGlobalModules()],
     })
-      .overrideGuard(AuthenticatedGuard)
-      .useValue({ canActivate: jest.fn(() => true) })
-      .overrideGuard(GetRequesterGuard)
-      .useValue({ canActivate: jest.fn(() => true) })
+      // .overrideGuard(AuthenticatedGuard)
+      // .useValue({ canActivate: jest.fn(() => true) })
+      // .overrideGuard(GetRequesterGuard)
+      // .useValue({ canActivate: jest.fn(() => true) })
       .compile();
 
     app = moduleFixture.createNestApplication();
-
-    const appModule = app.get(AppModule);
-    appModule.configure = function (consumer) {
-      consumer
-        .apply((req, res, next) => {
-          next();
-        })
-        .forRoutes('*');
-    };
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      next();
+    });
 
     await app.init();
   });

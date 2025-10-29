@@ -103,6 +103,8 @@ describe('AuthController', () => {
       Result.ok('Success', {
         accessToken: '',
         refreshToken: '',
+        atTime: 1,
+        rtTime: 1,
       }),
     );
 
