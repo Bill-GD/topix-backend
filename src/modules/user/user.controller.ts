@@ -1,4 +1,9 @@
-import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
+import {
+  ApiController,
+  ApiFile,
+  RequesterID,
+  UserExist,
+} from '@/common/decorators';
 import {
   AccountOwnerGuard,
   AuthenticatedGuard,
@@ -67,7 +72,8 @@ export class UserController {
   }
 
   @Get(':username')
-  @UseGuards(UserExistGuard('username'))
+  @UseGuards(UserExistGuard)
+  @UserExist({ check: 'username' })
   async getUser(
     @Param('username') username: string,
     @RequesterID() requesterId: number,
@@ -85,7 +91,8 @@ export class UserController {
   }
 
   @Post(':id/follow')
-  @UseGuards(UserExistGuard('id'))
+  @UseGuards(UserExistGuard)
+  @UserExist({ check: 'id' })
   async followUser(
     @Param('id', ParseIntPipe) userId: number,
     @RequesterID() requesterId: number,
@@ -136,7 +143,8 @@ export class UserController {
   }
 
   @Delete(':id/follow')
-  @UseGuards(UserExistGuard('id'))
+  @UseGuards(UserExistGuard)
+  @UserExist({ check: 'id' })
   async unfollowUser(
     @Param('id', ParseIntPipe) userId: number,
     @RequesterID() requesterId: number,
@@ -146,7 +154,8 @@ export class UserController {
   }
 
   @Delete(':username')
-  @UseGuards(UserExistGuard('username'), AccountOwnerGuard(true))
+  @UseGuards(UserExistGuard, AccountOwnerGuard)
+  @UserExist({ check: 'username' })
   async deleteProfile(@Param('username') username: string) {
     const res = await this.userService.deleteUser(username);
 

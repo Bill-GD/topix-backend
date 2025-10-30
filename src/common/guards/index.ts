@@ -8,5 +8,6 @@ export { GetRequesterGuard } from './get-requester.guard';
 export { RefreshTokenGuard } from './refresh-token.guard';
 export { IsAdminGuard } from './is-admin.guard';
 export { ChatChannelDuplicationGuard } from './chat-channel-duplication.guard';
+export { ChatChannelOwnerGuard } from './chat-channel-owner.guard';
 export * from './resource-owner.guard';
 export * from './resource-exist.guard';

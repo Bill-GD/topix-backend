@@ -1,4 +1,9 @@
-import { ApiController, RequesterID } from '@/common/decorators';
+import {
+  AccountInfo,
+  ApiController,
+  RequesterID,
+  UserExist,
+} from '@/common/decorators';
 import {
   AccountInfoGuard,
   AuthenticatedGuard,
@@ -50,7 +55,8 @@ export class AuthController {
   }
 
   @Post('register')
-  @UseGuards(AccountInfoGuard(false, ['username', 'email']))
+  @UseGuards(AccountInfoGuard)
+  @AccountInfo({ shouldExist: false, checks: ['username', 'email'] })
   async register(@Body() dto: RegisterDto) {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Provided passwords do not match.');
@@ -66,7 +72,8 @@ export class AuthController {
   }
 
   @Post('confirm/:id')
-  @UseGuards(UserExistGuard('id'), UserVerifiedGuard)
+  @UseGuards(UserExistGuard, UserVerifiedGuard)
+  @UserExist({ check: 'id' })
   async confirmOTP(
     @Param('id', ParseIntPipe) userId: number,
     @Body() dto: OtpDto,
@@ -83,7 +90,8 @@ export class AuthController {
   }
 
   @Post('resend/:id')
-  @UseGuards(UserExistGuard('id'), UserVerifiedGuard)
+  @UseGuards(UserExistGuard, UserVerifiedGuard)
+  @UserExist({ check: 'id' })
   async resendOTP(@Param('id', ParseIntPipe) userId: number) {
     await this.authService.sendOTP(userId);
 
@@ -95,7 +103,8 @@ export class AuthController {
   }
 
   @Post('login')
-  @UseGuards(AccountInfoGuard(true, ['username']))
+  @UseGuards(AccountInfoGuard)
+  @AccountInfo({ shouldExist: true, checks: ['username'] })
   async login(@Body() dto: LoginDto) {
     const res = await this.authService.login(dto);
     if (!res.success) throw new UnauthorizedException(res.message);

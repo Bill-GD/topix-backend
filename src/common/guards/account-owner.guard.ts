@@ -7,37 +7,26 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
-  mixin,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { eq } from 'drizzle-orm';
 import { Request } from 'express';
 
-export function AccountOwnerGuard(allowAdmin: boolean) {
-  @Injectable()
-  class AccountOwnerMixin implements CanActivate {
-    constructor(
-      readonly jwt: JwtService,
-      @Inject(DatabaseProviderKey) readonly db: DBType,
-    ) {}
+@Injectable()
+export class AccountOwnerGuard implements CanActivate {
+  constructor(@Inject(DatabaseProviderKey) readonly db: DBType) {}
 
-    async canActivate(context: ExecutionContext): Promise<boolean> {
-      const req = context.switchToHttp().getRequest<Request>();
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req = context.switchToHttp().getRequest<Request>();
 
-      const [{ id: requestedUser }] = await this.db
-        .select({ id: userTable.id })
-        .from(userTable)
-        .where(eq(userTable.username, req.params.username));
+    const [{ id: requestedUser, role }] = await this.db
+      .select({ id: userTable.id, role: userTable.role })
+      .from(userTable)
+      .where(eq(userTable.username, req.params.username));
 
-      if (!allowAdmin && req.userId !== requestedUser) {
-        throw new ForbiddenException(
-          'User does not have access to this action.',
-        );
-      }
-
-      return true;
+    if (role !== 'admin' && req.userId !== requestedUser) {
+      throw new ForbiddenException('User does not have access to this action.');
     }
-  }
 
-  return mixin(AccountOwnerMixin);
+    return true;
+  }
 }

@@ -2,9 +2,9 @@ import { ApiController, RequesterID } from '@/common/decorators';
 import {
   AuthenticatedGuard,
   ChatChannelDuplicationGuard,
+  ChatChannelOwnerGuard,
   GetRequesterGuard,
 } from '@/common/guards';
-import { ChatChannelOwnerGuard } from '@/common/guards/chat-channel-owner.guard';
 import { ChatQuery, MessageQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';

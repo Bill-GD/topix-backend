@@ -3,6 +3,7 @@ import {
   applyDecorators,
   BadRequestException,
   createParamDecorator,
+  SetMetadata,
   Type,
   UseInterceptors,
 } from '@nestjs/common';
@@ -17,6 +18,11 @@ import {
 } from 'class-validator';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
+
+export const DecoratorKeys = {
+  userExistCheck: 'UserExistConfig',
+  accountExistCheck: 'AccountExistConfig',
+} as const;
 
 export function ApiController(...extraMimeTypes: string[]) {
   return applyDecorators(
@@ -57,6 +63,14 @@ export const WsRequesterID = createParamDecorator((data, context) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   return client.data.userId as number;
 });
+
+export const UserExist = (config: { check: 'id' | 'username' }) =>
+  SetMetadata(DecoratorKeys.userExistCheck, config.check);
+
+export const AccountInfo = (config: {
+  shouldExist: boolean;
+  checks: ('email' | 'username')[];
+}) => SetMetadata(DecoratorKeys.accountExistCheck, config);
 
 export function IsNotEmptyString() {
   return applyDecorators(IsString(), IsNotEmpty());
