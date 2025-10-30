@@ -16,12 +16,15 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
+import { MySqlColumn, MySqlTable } from 'drizzle-orm/mysql-core';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
 
 export const DecoratorKeys = {
-  userExistCheck: 'UserExistConfig',
-  accountExistCheck: 'AccountExistConfig',
+  userExistConfig: 'UserExistConfig',
+  accountInfoConfig: 'AccountInfoConfig',
+  resourceExistConfig: 'ResourceExistConfig',
+  resourceOwnerConfig: 'ResourceOwnerConfig',
 } as const;
 
 export function ApiController(...extraMimeTypes: string[]) {
@@ -64,13 +67,35 @@ export const WsRequesterID = createParamDecorator((data, context) => {
   return client.data.userId as number;
 });
 
-export const UserExist = (config: { check: 'id' | 'username' }) =>
-  SetMetadata(DecoratorKeys.userExistCheck, config.check);
+export function UserExistConfig(config: { check: 'id' | 'username' }) {
+  return SetMetadata(DecoratorKeys.userExistConfig, config.check);
+}
 
-export const AccountInfo = (config: {
+export function AccountInfoConfig(config: {
   shouldExist: boolean;
   checks: ('email' | 'username')[];
-}) => SetMetadata(DecoratorKeys.accountExistCheck, config);
+}) {
+  return SetMetadata(DecoratorKeys.accountInfoConfig, config);
+}
+
+export function ResourceExistConfig(
+  ...resources: {
+    name?: string;
+    table: MySqlTable;
+    resourceIdColumn: MySqlColumn;
+  }[]
+) {
+  return SetMetadata(DecoratorKeys.resourceExistConfig, resources);
+}
+
+export function ResourceOwnerConfig(resource: {
+  table: MySqlTable;
+  resourceUserIdColumn: MySqlColumn;
+  resourceIdColumn: MySqlColumn;
+  allowAdmin?: boolean;
+}) {
+  return SetMetadata(DecoratorKeys.resourceOwnerConfig, resource);
+}
 
 export function IsNotEmptyString() {
   return applyDecorators(IsString(), IsNotEmpty());

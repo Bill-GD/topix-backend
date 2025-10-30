@@ -1,18 +1,23 @@
-import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
+import {
+  ApiController,
+  ApiFile,
+  RequesterID,
+  ResourceExistConfig,
+  ResourceOwnerConfig,
+} from '@/common/decorators';
 import {
   AuthenticatedGuard,
   GetRequesterGuard,
-  PostExistGuard,
-  PostOwnerGuard,
-  PostOwnerOrAdminGuard,
+  ResourceExistGuard,
+  ResourceOwnerGuard,
 } from '@/common/guards';
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { PostQuery } from '@/common/queries';
 import { CommonQuery } from '@/common/queries/common.query';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
+import { postTable } from '@/database/schemas';
 import { NotificationDto } from '@/modules/notification/dto/notification.dto';
-import { EventService } from '@/modules/notification/event.service';
 import { NotificationService } from '@/modules/notification/notification.service';
 import { UpdatePostDto } from '@/modules/post/dto/update-post.dto';
 import {
@@ -44,7 +49,6 @@ export class PostController {
   constructor(
     private readonly postService: PostService,
     private readonly notificationService: NotificationService,
-    private readonly eventService: EventService,
   ) {}
 
   @Post()
@@ -97,7 +101,12 @@ export class PostController {
   }
 
   @Get(':id')
-  @UseGuards(PostExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @ResourceExistConfig({
+    name: 'Post',
+    table: postTable,
+    resourceIdColumn: postTable.id,
+  })
   async getOne(
     @Param('id', ParseIntPipe) postId: number,
     @RequesterID() requesterId: number,
@@ -107,7 +116,17 @@ export class PostController {
   }
 
   @Patch(':id')
-  @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Post',
+    table: postTable,
+    resourceIdColumn: postTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: postTable,
+    resourceUserIdColumn: postTable.ownerId,
+    resourceIdColumn: postTable.id,
+  })
   async update(
     @Param('id', ParseIntPipe) postId: number,
     @Body() dto: UpdatePostDto,
@@ -117,14 +136,30 @@ export class PostController {
   }
 
   @Delete(':id')
-  @UseGuards(PostExistGuard, GetRequesterGuard, PostOwnerOrAdminGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Post',
+    table: postTable,
+    resourceIdColumn: postTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: postTable,
+    resourceUserIdColumn: postTable.ownerId,
+    resourceIdColumn: postTable.id,
+    allowAdmin: true,
+  })
   async remove(@Param('id', ParseIntPipe) postId: number) {
     const res = await this.postService.remove(postId);
     return ControllerResponse.ok(res.message, null, HttpStatus.OK);
   }
 
   @Patch(':id/react')
-  @UseGuards(PostExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @ResourceExistConfig({
+    name: 'Post',
+    table: postTable,
+    resourceIdColumn: postTable.id,
+  })
   async react(
     @Param('id', ParseIntPipe) postId: number,
     @RequesterID() requesterId: number,
@@ -149,7 +184,12 @@ export class PostController {
   }
 
   @Delete(':id/react')
-  @UseGuards(PostExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @ResourceExistConfig({
+    name: 'Post',
+    table: postTable,
+    resourceIdColumn: postTable.id,
+  })
   async removeReaction(
     @Param('id', ParseIntPipe) postId: number,
     @RequesterID() requesterId: number,
@@ -159,7 +199,12 @@ export class PostController {
   }
 
   @Post(':id/reply')
-  @UseGuards(PostExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @ResourceExistConfig({
+    name: 'Post',
+    table: postTable,
+    resourceIdColumn: postTable.id,
+  })
   @ApiFile('files', CreatePostDto, 'list')
   async reply(
     @Param('id', ParseIntPipe) postId: number,

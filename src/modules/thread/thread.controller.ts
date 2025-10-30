@@ -1,14 +1,21 @@
-import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
+import {
+  ApiController,
+  ApiFile,
+  RequesterID,
+  ResourceExistConfig,
+  ResourceOwnerConfig,
+} from '@/common/decorators';
 import {
   AuthenticatedGuard,
   GetRequesterGuard,
-  ThreadExistGuard,
-  ThreadOwnerGuard,
+  ResourceExistGuard,
+  ResourceOwnerGuard,
 } from '@/common/guards';
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { ThreadQuery } from '@/common/queries';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
+import { threadTable } from '@/database/schemas';
 import { NotificationDto } from '@/modules/notification/dto/notification.dto';
 import { NotificationService } from '@/modules/notification/notification.service';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
@@ -57,7 +64,12 @@ export class ThreadController {
   }
 
   @Get(':id')
-  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @ResourceExistConfig({
+    name: 'Thread',
+    table: threadTable,
+    resourceIdColumn: threadTable.id,
+  })
   async getOne(
     @Param('id', ParseIntPipe) threadId: number,
     @RequesterID() requesterId: number,
@@ -77,7 +89,17 @@ export class ThreadController {
   }
 
   @Post(':id/post')
-  @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Thread',
+    table: threadTable,
+    resourceIdColumn: threadTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: threadTable,
+    resourceUserIdColumn: threadTable.ownerId,
+    resourceIdColumn: threadTable.id,
+  })
   @ApiFile('files', CreatePostDto, 'list')
   async addPost(
     @Param('id', ParseIntPipe) threadId: number,
@@ -116,7 +138,12 @@ export class ThreadController {
   }
 
   @Post(':id/follow')
-  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @ResourceExistConfig({
+    name: 'Thread',
+    table: threadTable,
+    resourceIdColumn: threadTable.id,
+  })
   async followThread(
     @Param('id', ParseIntPipe) threadId: number,
     @RequesterID() requesterId: number,
@@ -129,7 +156,17 @@ export class ThreadController {
   }
 
   @Patch(':id')
-  @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Thread',
+    table: threadTable,
+    resourceIdColumn: threadTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: threadTable,
+    resourceUserIdColumn: threadTable.ownerId,
+    resourceIdColumn: threadTable.id,
+  })
   async update(
     @Param('id', ParseIntPipe) threadId: number,
     @Body() dto: UpdateThreadDto,
@@ -139,7 +176,12 @@ export class ThreadController {
   }
 
   @Delete(':id/follow')
-  @UseGuards(ThreadExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @ResourceExistConfig({
+    name: 'Thread',
+    table: threadTable,
+    resourceIdColumn: threadTable.id,
+  })
   async unfollowThread(
     @Param('id', ParseIntPipe) threadId: number,
     @RequesterID() requesterId: number,
@@ -152,7 +194,17 @@ export class ThreadController {
   }
 
   @Delete(':id')
-  @UseGuards(ThreadExistGuard, GetRequesterGuard, ThreadOwnerGuard)
+  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Thread',
+    table: threadTable,
+    resourceIdColumn: threadTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: threadTable,
+    resourceUserIdColumn: threadTable.ownerId,
+    resourceIdColumn: threadTable.id,
+  })
   async remove(@Param('id', ParseIntPipe) threadId: number) {
     const res = await this.threadService.remove(threadId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);

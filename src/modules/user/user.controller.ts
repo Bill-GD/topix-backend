@@ -2,7 +2,7 @@ import {
   ApiController,
   ApiFile,
   RequesterID,
-  UserExist,
+  UserExistConfig,
 } from '@/common/decorators';
 import {
   AccountOwnerGuard,
@@ -73,7 +73,7 @@ export class UserController {
 
   @Get(':username')
   @UseGuards(UserExistGuard)
-  @UserExist({ check: 'username' })
+  @UserExistConfig({ check: 'username' })
   async getUser(
     @Param('username') username: string,
     @RequesterID() requesterId: number,
@@ -92,7 +92,7 @@ export class UserController {
 
   @Post(':id/follow')
   @UseGuards(UserExistGuard)
-  @UserExist({ check: 'id' })
+  @UserExistConfig({ check: 'id' })
   async followUser(
     @Param('id', ParseIntPipe) userId: number,
     @RequesterID() requesterId: number,
@@ -144,7 +144,7 @@ export class UserController {
 
   @Delete(':id/follow')
   @UseGuards(UserExistGuard)
-  @UserExist({ check: 'id' })
+  @UserExistConfig({ check: 'id' })
   async unfollowUser(
     @Param('id', ParseIntPipe) userId: number,
     @RequesterID() requesterId: number,
@@ -155,7 +155,7 @@ export class UserController {
 
   @Delete(':username')
   @UseGuards(UserExistGuard, AccountOwnerGuard)
-  @UserExist({ check: 'username' })
+  @UserExistConfig({ check: 'username' })
   async deleteProfile(@Param('username') username: string) {
     const res = await this.userService.deleteUser(username);
 

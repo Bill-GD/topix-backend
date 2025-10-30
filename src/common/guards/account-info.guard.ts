@@ -31,7 +31,7 @@ export class AccountInfoGuard implements CanActivate {
     const { shouldExist, checks } = this.reflector.get<{
       shouldExist: boolean;
       checks: ('email' | 'username')[];
-    }>(DecoratorKeys.accountExistCheck, context.getHandler());
+    }>(DecoratorKeys.accountInfoConfig, context.getHandler());
 
     const dto = plainToInstance(
       handlerName === 'login' ? LoginDto : RegisterDto,

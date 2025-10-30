@@ -23,7 +23,7 @@ export class UserExistGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const check = this.reflector.get<'id' | 'username'>(
-      DecoratorKeys.userExistCheck,
+      DecoratorKeys.userExistConfig,
       context.getHandler(),
     );
     let count = 0;
