@@ -78,15 +78,12 @@ export class AuthController {
     @Param('id', ParseIntPipe) userId: number,
     @Body() dto: OtpDto,
   ) {
-    const { success, message } = await this.authService.checkOTP(
-      dto.otp,
-      userId,
-    );
+    const res = await this.authService.checkOTP(dto.otp, userId);
 
-    if (!success) throw new BadRequestException(message);
+    if (!res.success) throw new BadRequestException(res.message);
     await this.authService.confirmUser(userId);
 
-    return ControllerResponse.ok(message, null, HttpStatus.OK);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Post('resend/:id')
