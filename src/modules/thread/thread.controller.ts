@@ -117,7 +117,7 @@ export class ThreadController {
     files: Array<Express.Multer.File>,
     @Body() dto: CreatePostDto,
   ) {
-    if (files) dto.fileObjects = files;
+    if (files && files.length > 0) dto.fileObjects = files;
     const res = await this.threadService.addPost(threadId, requesterId, dto);
 
     const { data: followers } = await this.threadService.getFollowers(threadId);

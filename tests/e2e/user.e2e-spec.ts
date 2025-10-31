@@ -266,7 +266,7 @@ describe('User (e2e)', () => {
       expect(app.get(UserController)).toBeDefined();
     });
 
-    it(`GET '/user' returns user list for admins`, () => {
+    it(`GET '/user' returns user list for admins with pagination header`, () => {
       const getUsersFunc = jest
         .spyOn(userService, 'getUsers')
         .mockResolvedValue(Result.ok('Success', []));

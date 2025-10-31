@@ -177,7 +177,7 @@ export class GroupController {
     files: Array<Express.Multer.File>,
     @Body() dto: CreatePostDto,
   ) {
-    if (files) dto.fileObjects = files;
+    if (files && files.length > 0) dto.fileObjects = files;
     const res = await this.groupService.addPost(groupId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }

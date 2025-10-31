@@ -70,7 +70,7 @@ export class PostController {
     files: Array<Express.Multer.File>,
     @Body() dto: CreatePostDto,
   ) {
-    if (files) dto.fileObjects = files;
+    if (files && files.length > 0) dto.fileObjects = files;
     const res = await this.postService.create(requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
@@ -221,7 +221,7 @@ export class PostController {
     files: Array<Express.Multer.File>,
     @Body() dto: CreatePostDto,
   ) {
-    if (files) dto.fileObjects = files;
+    if (files && files.length > 0) dto.fileObjects = files;
     const res = await this.postService.reply(postId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
