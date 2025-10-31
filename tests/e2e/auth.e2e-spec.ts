@@ -58,6 +58,8 @@ describe('Authentication (e2e)', () => {
     await app.init();
   });
 
+  beforeEach(() => jest.clearAllMocks());
+
   it('dependencies should be defined', () => {
     expect(authService).toBeDefined();
     expect(jwtService).toBeDefined();

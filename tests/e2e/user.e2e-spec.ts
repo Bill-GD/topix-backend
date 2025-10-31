@@ -19,15 +19,11 @@ import {
   applyGlobalEnhancers,
   defaultGuardMock,
   getGlobalModules,
+  mockDB,
   mockRequesterGuard,
 } from './test-helper';
 
 describe('User (e2e)', () => {
-  const mockDB = {
-    select: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn(),
-  };
   const accountOwnerGuardMock = new AccountOwnerGuard(
     mockDB as unknown as DBType,
   );
@@ -52,6 +48,8 @@ describe('User (e2e)', () => {
       userService = app.get(UserService);
       await app.init();
     });
+
+    beforeEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(userService).toBeDefined();
@@ -153,6 +151,8 @@ describe('User (e2e)', () => {
       eventService = app.get(EventService);
       await app.init();
     });
+
+    beforeEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(userService).toBeDefined();
@@ -260,6 +260,8 @@ describe('User (e2e)', () => {
       userService = app.get(UserService);
       await app.init();
     });
+
+    beforeEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(userService).toBeDefined();

@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { mockDB } from './e2e/test-helper';
 
 describe('Guards', () => {
   describe('Auth guard', () => {
@@ -52,11 +53,6 @@ describe('Guards', () => {
   });
 
   describe('Verified user guard', () => {
-    const mockDB = {
-      select: jest.fn().mockReturnThis(),
-      from: jest.fn().mockReturnThis(),
-      where: jest.fn(),
-    };
     const guardMock = new UserVerifiedGuard(mockDB as unknown as DBType);
     const mockContext = (userId: number) => ({
       switchToHttp: () => ({
