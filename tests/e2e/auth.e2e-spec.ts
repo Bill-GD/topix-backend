@@ -34,7 +34,6 @@ describe('Authentication (e2e)', () => {
   let app: INestApplication<App>;
   let authService: AuthService;
   let jwtService: JwtService;
-  let accessToken: string;
 
   beforeAll(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -43,7 +42,7 @@ describe('Authentication (e2e)', () => {
       .overrideGuard(AuthenticatedGuard)
       .useValue(defaultGuardMock)
       .overrideGuard(GetRequesterGuard)
-      .useValue(mockRequesterGuard('user'))
+      .useValue(mockRequesterGuard(1, 'user'))
       .overrideGuard(UserVerifiedGuard)
       .useValue(defaultGuardMock)
       .overrideGuard(UserExistGuard)
@@ -63,21 +62,20 @@ describe('Authentication (e2e)', () => {
     await app.init();
   });
 
-  beforeEach(() => {
-    accessToken = jwtService.sign({
-      sub: 1,
-      role: 'user',
-      type: 'access',
-    } as JwtUserPayload);
-  });
+  beforeEach(() => {});
 
-  it('controller & services should be defined', () => {
+  it('dependencies should be defined', () => {
     expect(authService).toBeDefined();
     expect(jwtService).toBeDefined();
     expect(app.get(AuthController)).toBeDefined();
   });
 
   it(`'/auth/refresh' returns 403 if refresh token not provided when refreshing`, () => {
+    const accessToken = jwtService.sign({
+      sub: 1,
+      role: 'user',
+      type: 'access',
+    } as JwtUserPayload);
     return request(app.getHttpServer())
       .post('/auth/refresh')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -111,7 +109,6 @@ describe('Authentication (e2e)', () => {
 
     return request(app.getHttpServer())
       .post('/auth/password-check')
-      .set('Authorization', `Bearer ${accessToken}`)
       .send({ password: 'wrongpassword' } as PasswordCheckDto)
       .expect(400);
   });
@@ -121,7 +118,6 @@ describe('Authentication (e2e)', () => {
 
     return request(app.getHttpServer())
       .post('/auth/password-check')
-      .set('Authorization', `Bearer ${accessToken}`)
       .send({ password: 'correctpassword' } as PasswordCheckDto)
       .expect(200);
   });

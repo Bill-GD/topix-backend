@@ -1,10 +1,21 @@
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import {
+  AccountOwnerGuard,
+  AuthenticatedGuard,
+  GetRequesterGuard,
+  UserExistGuard,
+} from '@/common/guards';
 import { ResponseInterceptor } from '@/common/interceptors';
+import { Result } from '@/common/utils/result';
+import { DBType } from '@/common/utils/types';
+import { EventService } from '@/modules/notification/event.service';
+import { NotificationService } from '@/modules/notification/notification.service';
+import { UserController } from '@/modules/user/user.controller';
 import { UserModule } from '@/modules/user/user.module';
 import { UserService } from '@/modules/user/user.service';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NextFunction, Request, Response } from 'express';
+import * as request from 'supertest';
 import { App } from 'supertest/types';
 import {
   defaultGuardMock,
@@ -13,49 +24,283 @@ import {
 } from './test-helper';
 
 describe('User (e2e)', () => {
-  let app: INestApplication<App>;
-  let userService: UserService;
+  const mockDB = {
+    select: jest.fn().mockReturnThis(),
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn(),
+  };
+  const accountOwnerGuardMock = new AccountOwnerGuard(
+    mockDB as unknown as DBType,
+  );
 
-  beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [UserModule, ...getGlobalModules()],
-    })
-      .overrideGuard(AuthenticatedGuard)
-      .useValue(defaultGuardMock)
-      .overrideGuard(GetRequesterGuard)
-      .useValue(mockRequesterGuard('user'))
-      .compile();
+  describe('with user exist check', () => {
+    let app: INestApplication<App>;
+    let userService: UserService;
 
-    app = moduleFixture.createNestApplication();
-    app.useGlobalInterceptors(new ResponseInterceptor());
-    app.use((req: Request, res: Response, next: NextFunction) => {
-      next();
+    beforeAll(async () => {
+      const moduleFixture: TestingModule = await Test.createTestingModule({
+        imports: [UserModule, ...getGlobalModules()],
+      })
+        .overrideGuard(AuthenticatedGuard)
+        .useValue(defaultGuardMock)
+        .overrideGuard(GetRequesterGuard)
+        .useValue(mockRequesterGuard(1, 'user'))
+        .compile();
+
+      app = moduleFixture.createNestApplication();
+      app.useGlobalInterceptors(new ResponseInterceptor());
+      app.use((req: Request, res: Response, next: NextFunction) => {
+        next();
+      });
+
+      userService = app.get(UserService);
+      await app.init();
     });
 
-    userService = app.get(UserService);
-    await app.init();
+    it('dependencies should be defined', () => {
+      expect(userService).toBeDefined();
+      expect(app.get(UserController)).toBeDefined();
+    });
+
+    it(`'/user' returns 403 for normal users`, () => {
+      const getUsersFunc = jest
+        .spyOn(userService, 'getUsers')
+        .mockResolvedValue(Result.ok('Success', []));
+
+      return request(app.getHttpServer())
+        .get('/user')
+        .expect(403)
+        .then(() => {
+          expect(getUsersFunc).not.toHaveBeenCalled();
+        });
+    });
+
+    it(`'/user/me' runs normally`, () => {
+      const getMeFunc = jest
+        .spyOn(userService, 'getUserById')
+        .mockResolvedValue({
+          id: 1,
+          username: 'testusername',
+          displayName: 'test user',
+          profilePicture: null,
+          role: 'user',
+        });
+
+      return request(app.getHttpServer())
+        .get('/user/me')
+        .expect(200)
+        .then(() => {
+          expect(getMeFunc).toHaveBeenCalledWith(1);
+        });
+    });
+
+    it(`'user/me' returns 409 if fail to update to taken username`, () => {
+      const updateFunc = jest
+        .spyOn(userService, 'updateProfileInfo')
+        .mockResolvedValue(Result.fail('Fail'));
+
+      return request(app.getHttpServer())
+        .patch('/user/me')
+        .field('username', 'takenusername')
+        .expect(409)
+        .then(() => {
+          expect(updateFunc).toHaveBeenCalledWith(1, {
+            username: 'takenusername',
+          });
+        });
+    });
+
+    it(`'user/me' should update user profile correctly`, () => {
+      const updateFunc = jest
+        .spyOn(userService, 'updateProfileInfo')
+        .mockResolvedValue(Result.ok('Success', null));
+
+      return request(app.getHttpServer())
+        .patch('/user/me')
+        .field('username', 'newusername')
+        .expect(200)
+        .then(() => {
+          expect(updateFunc).toHaveBeenCalledWith(1, {
+            username: 'newusername',
+          });
+        });
+    });
+
+    afterAll(async () => await app.close());
   });
 
-  it('empty test', () => {
-    expect(1).toBe(1);
+  describe('without user exist check', () => {
+    let app: INestApplication<App>;
+    let userService: UserService;
+    let notiService: NotificationService;
+    let eventService: EventService;
+
+    beforeAll(async () => {
+      const moduleFixture: TestingModule = await Test.createTestingModule({
+        imports: [UserModule, ...getGlobalModules()],
+      })
+        .overrideGuard(AuthenticatedGuard)
+        .useValue(defaultGuardMock)
+        .overrideGuard(GetRequesterGuard)
+        .useValue(mockRequesterGuard(1, 'user'))
+        .overrideGuard(UserExistGuard)
+        .useValue(defaultGuardMock)
+        .overrideGuard(AccountOwnerGuard)
+        .useValue(accountOwnerGuardMock)
+        .compile();
+
+      app = moduleFixture.createNestApplication();
+      app.useGlobalInterceptors(new ResponseInterceptor());
+      app.use((req: Request, res: Response, next: NextFunction) => {
+        next();
+      });
+
+      userService = app.get(UserService);
+      notiService = app.get(NotificationService);
+      eventService = app.get(EventService);
+      await app.init();
+    });
+
+    it('dependencies should be defined', () => {
+      expect(userService).toBeDefined();
+      expect(notiService).toBeDefined();
+      expect(eventService).toBeDefined();
+      expect(app.get(UserController)).toBeDefined();
+    });
+
+    it(`'/user/username' returns 200 if user was found`, () => {
+      const getByUsernameFunc = jest
+        .spyOn(userService, 'getUserByUsername')
+        .mockResolvedValue({
+          id: 1,
+          username: 'testusername',
+          displayName: 'test user',
+          profilePicture: null,
+          role: 'user',
+          description: null,
+          followerCount: 0,
+          followingCount: 0,
+          followed: true,
+          chatChannelId: 1,
+        });
+
+      return request(app.getHttpServer())
+        .get('/user/realusername')
+        .expect(200)
+        .then(() => {
+          expect(getByUsernameFunc).toHaveBeenCalledWith('realusername', 1);
+        });
+    });
+
+    it(`POST '/user/:id/follow' returns 200 and sent notification`, () => {
+      const followFunc = jest
+        .spyOn(userService, 'followUser')
+        .mockResolvedValue(Result.ok('Success', null));
+      const createNotiFunc = jest
+        .spyOn(notiService, 'create')
+        .mockResolvedValue();
+      const emitNotiFunc = jest
+        .spyOn(notiService, 'emitNotification')
+        .mockResolvedValue();
+
+      return request(app.getHttpServer())
+        .post('/user/2/follow')
+        .expect(200)
+        .then(() => {
+          expect(followFunc).toHaveBeenCalledWith(2, 1);
+          expect(createNotiFunc).toHaveBeenCalled();
+          expect(emitNotiFunc).toHaveBeenCalled();
+        });
+    });
+
+    it(`DELETE '/user/:id/follow' returns 200`, () => {
+      const unfollowFunc = jest
+        .spyOn(userService, 'unfollowUser')
+        .mockResolvedValue(Result.ok('Success', null));
+
+      return request(app.getHttpServer())
+        .delete('/user/2/follow')
+        .expect(200)
+        .then(() => {
+          expect(unfollowFunc).toHaveBeenCalledWith(2, 1);
+        });
+    });
+
+    it(`user can't delete other user account`, () => {
+      const deleteFunc = jest
+        .spyOn(userService, 'deleteUser')
+        .mockResolvedValue(Result.fail('Fail'));
+      mockDB.where.mockResolvedValue([{ id: 2 }]);
+
+      return request(app.getHttpServer())
+        .delete('/user/testuser')
+        .expect(403)
+        .then(() => {
+          expect(deleteFunc).not.toHaveBeenCalled();
+        });
+    });
+
+    afterAll(async () => await app.close());
   });
 
-  // it('should return 400 for wrong password', () => {
-  //   return request(app.getHttpServer())
-  //     .post('/auth/password-check')
-  //     .send({ password: 'clearlywrongpassword' })
-  //     .expect(400);
-  // });
-  //
-  // it('return 403 when trying to send email to verified user', () => {
-  //   return request(app.getHttpServer()).post('/auth/resend/1').expect(403);
-  // });
-  //
-  // it(`should return 404 if user doesn't exist`, async () => {
-  //   return request(app.getHttpServer())
-  //     .get('/user/an-username_that-should_not-exist_123')
-  //     .expect(404);
-  // });
+  describe('user is an admin', () => {
+    let app: INestApplication<App>;
+    let userService: UserService;
 
-  afterAll(async () => await app.close());
+    beforeAll(async () => {
+      const moduleFixture: TestingModule = await Test.createTestingModule({
+        imports: [UserModule, ...getGlobalModules()],
+      })
+        .overrideGuard(AuthenticatedGuard)
+        .useValue(defaultGuardMock)
+        .overrideGuard(GetRequesterGuard)
+        .useValue(mockRequesterGuard(1, 'admin'))
+        .overrideGuard(UserExistGuard)
+        .useValue(defaultGuardMock)
+        .overrideGuard(AccountOwnerGuard)
+        .useValue(accountOwnerGuardMock)
+        .compile();
+
+      app = moduleFixture.createNestApplication();
+      app.useGlobalInterceptors(new ResponseInterceptor());
+      app.use((req: Request, res: Response, next: NextFunction) => {
+        next();
+      });
+
+      userService = app.get(UserService);
+      await app.init();
+    });
+
+    it('dependencies should be defined', () => {
+      expect(userService).toBeDefined();
+      expect(app.get(UserController)).toBeDefined();
+    });
+
+    it(`'/user' returns user list for admins`, () => {
+      const getUsersFunc = jest
+        .spyOn(userService, 'getUsers')
+        .mockResolvedValue(Result.ok('Success', []));
+
+      return request(app.getHttpServer())
+        .get('/user')
+        .expect(200)
+        .then((res) => {
+          expect(getUsersFunc).toHaveBeenCalled();
+          expect(res.headers['x-end-of-list']).toBeDefined();
+        });
+    });
+
+    it(`admin can delete users`, () => {
+      const deleteFunc = jest
+        .spyOn(userService, 'deleteUser')
+        .mockResolvedValue(Result.ok('Success', null));
+
+      return request(app.getHttpServer())
+        .delete('/user/testuser')
+        .expect(200)
+        .then(() => {
+          expect(deleteFunc).toHaveBeenCalledWith('testuser');
+        });
+    });
+  });
 });

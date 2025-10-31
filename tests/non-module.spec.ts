@@ -7,8 +7,8 @@ describe('Non-module functions', () => {
 
   it(`Formatted size string correctly`, () => {
     expect(getReadableSize(10)).toBe('10 B');
-    expect(getReadableSize(1024)).toBe('1 KB');
-    expect(getReadableSize(1024 ^ 2)).toBe('1 MB');
-    expect(getReadableSize(1024 ^ 3)).toBe('1 GB');
+    expect(getReadableSize(1024)).toBe('1.0 KB');
+    expect(getReadableSize(1024 ** 2)).toBe('1.0 MB');
+    expect(getReadableSize(1024 ** 3)).toBe('1.0 GB');
   });
 });

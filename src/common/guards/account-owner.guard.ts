@@ -18,12 +18,12 @@ export class AccountOwnerGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
 
-    const [{ id: requestedUser, role }] = await this.db
-      .select({ id: userTable.id, role: userTable.role })
+    const [{ id: requestedUser }] = await this.db
+      .select({ id: userTable.id })
       .from(userTable)
       .where(eq(userTable.username, req.params.username));
 
-    if (role !== 'admin' && req.userId !== requestedUser) {
+    if (req.userRole !== 'admin' && req.userId !== requestedUser) {
       throw new ForbiddenException('User does not have access to this action.');
     }
 

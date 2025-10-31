@@ -179,6 +179,7 @@ export class UserService {
       .select()
       .from(userTable)
       .where(eq(userTable.username, username));
+
     if (user.role === 'admin') {
       return Result.fail(`Admin account can't be deleted.`);
     }
