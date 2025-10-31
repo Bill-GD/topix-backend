@@ -1,28 +1,38 @@
+import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import { ResponseInterceptor } from '@/common/interceptors';
 import { UserModule } from '@/modules/user/user.module';
+import { UserService } from '@/modules/user/user.service';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NextFunction, Request, Response } from 'express';
 import { App } from 'supertest/types';
-import { getGlobalModules } from './test-helper';
+import {
+  defaultGuardMock,
+  getGlobalModules,
+  mockRequesterGuard,
+} from './test-helper';
 
 describe('User (e2e)', () => {
   let app: INestApplication<App>;
+  let userService: UserService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [UserModule, ...getGlobalModules()],
     })
-      // .overrideGuard(AuthenticatedGuard)
-      // .useValue({ canActivate: jest.fn(() => true) })
-      // .overrideGuard(GetRequesterGuard)
-      // .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(AuthenticatedGuard)
+      .useValue(defaultGuardMock)
+      .overrideGuard(GetRequesterGuard)
+      .useValue(mockRequesterGuard('user'))
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalInterceptors(new ResponseInterceptor());
     app.use((req: Request, res: Response, next: NextFunction) => {
       next();
     });
 
+    userService = app.get(UserService);
     await app.init();
   });
 

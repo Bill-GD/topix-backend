@@ -26,11 +26,13 @@ export const defaultGuardMock = {
   canActivate: jest.fn(() => true),
 };
 
-export const getRequesterGuardMock: CanActivate = {
-  canActivate: jest.fn((context) => {
-    const req = context.switchToHttp().getRequest<Request>();
-    req.userId = 1;
-    req.userRole = 'user';
-    return true;
-  }),
-};
+export function mockRequesterGuard(role: 'user' | 'admin'): CanActivate {
+  return {
+    canActivate: jest.fn((context) => {
+      const req = context.switchToHttp().getRequest<Request>();
+      req.userId = 1;
+      req.userRole = role;
+      return true;
+    }),
+  };
+}

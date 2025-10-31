@@ -25,7 +25,7 @@ import { App } from 'supertest/types';
 import {
   defaultGuardMock,
   getGlobalModules,
-  getRequesterGuardMock,
+  mockRequesterGuard,
 } from './test-helper';
 
 dotenv.config({ path: '.env', quiet: true });
@@ -43,7 +43,7 @@ describe('Authentication (e2e)', () => {
       .overrideGuard(AuthenticatedGuard)
       .useValue(defaultGuardMock)
       .overrideGuard(GetRequesterGuard)
-      .useValue(getRequesterGuardMock)
+      .useValue(mockRequesterGuard('user'))
       .overrideGuard(UserVerifiedGuard)
       .useValue(defaultGuardMock)
       .overrideGuard(UserExistGuard)
