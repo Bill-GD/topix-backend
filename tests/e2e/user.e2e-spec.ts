@@ -4,7 +4,6 @@ import {
   GetRequesterGuard,
   UserExistGuard,
 } from '@/common/guards';
-import { ResponseInterceptor } from '@/common/interceptors';
 import { Result } from '@/common/utils/result';
 import { DBType } from '@/common/utils/types';
 import { EventService } from '@/modules/notification/event.service';
@@ -14,10 +13,10 @@ import { UserModule } from '@/modules/user/user.module';
 import { UserService } from '@/modules/user/user.service';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NextFunction, Request, Response } from 'express';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import {
+  applyGlobalEnhancers,
   defaultGuardMock,
   getGlobalModules,
   mockRequesterGuard,
@@ -38,7 +37,7 @@ describe('User (e2e)', () => {
     let userService: UserService;
 
     beforeAll(async () => {
-      const moduleFixture: TestingModule = await Test.createTestingModule({
+      const moduleRef: TestingModule = await Test.createTestingModule({
         imports: [UserModule, ...getGlobalModules()],
       })
         .overrideGuard(AuthenticatedGuard)
@@ -47,11 +46,8 @@ describe('User (e2e)', () => {
         .useValue(mockRequesterGuard(1, 'user'))
         .compile();
 
-      app = moduleFixture.createNestApplication();
-      app.useGlobalInterceptors(new ResponseInterceptor());
-      app.use((req: Request, res: Response, next: NextFunction) => {
-        next();
-      });
+      app = moduleRef.createNestApplication();
+      applyGlobalEnhancers(app);
 
       userService = app.get(UserService);
       await app.init();
@@ -62,7 +58,7 @@ describe('User (e2e)', () => {
       expect(app.get(UserController)).toBeDefined();
     });
 
-    it(`'/user' returns 403 for normal users`, () => {
+    it(`GET '/user' returns 403 for normal users`, () => {
       const getUsersFunc = jest
         .spyOn(userService, 'getUsers')
         .mockResolvedValue(Result.ok('Success', []));
@@ -75,7 +71,7 @@ describe('User (e2e)', () => {
         });
     });
 
-    it(`'/user/me' runs normally`, () => {
+    it(`GET '/user/me' runs normally`, () => {
       const getMeFunc = jest
         .spyOn(userService, 'getUserById')
         .mockResolvedValue({
@@ -94,7 +90,7 @@ describe('User (e2e)', () => {
         });
     });
 
-    it(`'user/me' returns 409 if fail to update to taken username`, () => {
+    it(`PATCH 'user/me' returns 409 if fail to update to taken username`, () => {
       const updateFunc = jest
         .spyOn(userService, 'updateProfileInfo')
         .mockResolvedValue(Result.fail('Fail'));
@@ -110,7 +106,7 @@ describe('User (e2e)', () => {
         });
     });
 
-    it(`'user/me' should update user profile correctly`, () => {
+    it(`PATCH 'user/me' should update user profile correctly`, () => {
       const updateFunc = jest
         .spyOn(userService, 'updateProfileInfo')
         .mockResolvedValue(Result.ok('Success', null));
@@ -136,7 +132,7 @@ describe('User (e2e)', () => {
     let eventService: EventService;
 
     beforeAll(async () => {
-      const moduleFixture: TestingModule = await Test.createTestingModule({
+      const moduleRef: TestingModule = await Test.createTestingModule({
         imports: [UserModule, ...getGlobalModules()],
       })
         .overrideGuard(AuthenticatedGuard)
@@ -149,11 +145,8 @@ describe('User (e2e)', () => {
         .useValue(accountOwnerGuardMock)
         .compile();
 
-      app = moduleFixture.createNestApplication();
-      app.useGlobalInterceptors(new ResponseInterceptor());
-      app.use((req: Request, res: Response, next: NextFunction) => {
-        next();
-      });
+      app = moduleRef.createNestApplication();
+      applyGlobalEnhancers(app);
 
       userService = app.get(UserService);
       notiService = app.get(NotificationService);
@@ -168,7 +161,7 @@ describe('User (e2e)', () => {
       expect(app.get(UserController)).toBeDefined();
     });
 
-    it(`'/user/username' returns 200 if user was found`, () => {
+    it(`GET '/user/username' returns 200 if user was found`, () => {
       const getByUsernameFunc = jest
         .spyOn(userService, 'getUserByUsername')
         .mockResolvedValue({
@@ -248,7 +241,7 @@ describe('User (e2e)', () => {
     let userService: UserService;
 
     beforeAll(async () => {
-      const moduleFixture: TestingModule = await Test.createTestingModule({
+      const moduleRef: TestingModule = await Test.createTestingModule({
         imports: [UserModule, ...getGlobalModules()],
       })
         .overrideGuard(AuthenticatedGuard)
@@ -261,11 +254,8 @@ describe('User (e2e)', () => {
         .useValue(accountOwnerGuardMock)
         .compile();
 
-      app = moduleFixture.createNestApplication();
-      app.useGlobalInterceptors(new ResponseInterceptor());
-      app.use((req: Request, res: Response, next: NextFunction) => {
-        next();
-      });
+      app = moduleRef.createNestApplication();
+      applyGlobalEnhancers(app);
 
       userService = app.get(UserService);
       await app.init();
@@ -276,7 +266,7 @@ describe('User (e2e)', () => {
       expect(app.get(UserController)).toBeDefined();
     });
 
-    it(`'/user' returns user list for admins`, () => {
+    it(`GET '/user' returns user list for admins`, () => {
       const getUsersFunc = jest
         .spyOn(userService, 'getUsers')
         .mockResolvedValue(Result.ok('Success', []));

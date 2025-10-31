@@ -5,7 +5,6 @@ import {
   UserExistGuard,
   UserVerifiedGuard,
 } from '@/common/guards';
-import { ResponseInterceptor } from '@/common/interceptors';
 import { Result } from '@/common/utils/result';
 import { JwtUserPayload } from '@/common/utils/types';
 import { AuthController } from '@/modules/auth/auth.controller';
@@ -19,10 +18,10 @@ import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as dotenv from 'dotenv';
-import { NextFunction, Request, Response } from 'express';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import {
+  applyGlobalEnhancers,
   defaultGuardMock,
   getGlobalModules,
   mockRequesterGuard,
@@ -52,17 +51,12 @@ describe('Authentication (e2e)', () => {
       .compile();
 
     app = moduleRef.createNestApplication();
-    app.useGlobalInterceptors(new ResponseInterceptor());
-    app.use((req: Request, res: Response, next: NextFunction) => {
-      next();
-    });
+    applyGlobalEnhancers(app);
 
     authService = app.get(AuthService);
     jwtService = app.get(JwtService);
     await app.init();
   });
-
-  beforeEach(() => {});
 
   it('dependencies should be defined', () => {
     expect(authService).toBeDefined();
@@ -70,7 +64,7 @@ describe('Authentication (e2e)', () => {
     expect(app.get(AuthController)).toBeDefined();
   });
 
-  it(`'/auth/refresh' returns 403 if refresh token not provided when refreshing`, () => {
+  it(`POST '/auth/refresh' returns 403 if refresh token not provided when refreshing`, () => {
     const accessToken = jwtService.sign({
       sub: 1,
       role: 'user',
@@ -82,7 +76,7 @@ describe('Authentication (e2e)', () => {
       .expect(403);
   });
 
-  it(`'/auth/refresh' returns refresh token with its age`, () => {
+  it(`POST '/auth/refresh' returns refresh token with its age`, () => {
     const refreshToken = jwtService.sign({
       sub: 1,
       role: 'user',
@@ -104,7 +98,7 @@ describe('Authentication (e2e)', () => {
       });
   });
 
-  it(`'/auth/password-check' returns 400 if password is wrong`, () => {
+  it(`POST '/auth/password-check' returns 400 if password is wrong`, () => {
     jest.spyOn(authService, 'checkPassword').mockResolvedValue(false);
 
     return request(app.getHttpServer())
@@ -113,7 +107,7 @@ describe('Authentication (e2e)', () => {
       .expect(400);
   });
 
-  it(`'/auth/password-check' returns 200 if password is correct`, () => {
+  it(`POST '/auth/password-check' returns 200 if password is correct`, () => {
     jest.spyOn(authService, 'checkPassword').mockResolvedValue(true);
 
     return request(app.getHttpServer())
@@ -122,7 +116,7 @@ describe('Authentication (e2e)', () => {
       .expect(200);
   });
 
-  it(`'/auth/register' returns 400 if passwords don't match`, () => {
+  it(`POST '/auth/register' returns 400 if passwords don't match`, () => {
     return request(app.getHttpServer())
       .post('/auth/register')
       .send({
@@ -134,7 +128,7 @@ describe('Authentication (e2e)', () => {
       .expect(400);
   });
 
-  it(`'/auth/register' returns 400 if password too short`, () => {
+  it(`POST '/auth/register' returns 400 if password too short`, () => {
     jest.spyOn(authService, 'register').mockResolvedValue(1);
 
     return request(app.getHttpServer())
@@ -148,7 +142,7 @@ describe('Authentication (e2e)', () => {
       .expect(400);
   });
 
-  it(`'/auth/register' returns 400 if username has space`, () => {
+  it(`POST '/auth/register' returns 400 if username has space`, () => {
     jest.spyOn(authService, 'register').mockResolvedValue(1);
 
     return request(app.getHttpServer())
@@ -162,7 +156,7 @@ describe('Authentication (e2e)', () => {
       .expect(400);
   });
 
-  it(`'/auth/register' returns 201 if registered successfully`, () => {
+  it(`POST '/auth/register' returns 201 if registered successfully`, () => {
     const registerFunc = jest
       .spyOn(authService, 'register')
       .mockResolvedValue(1);
@@ -183,7 +177,7 @@ describe('Authentication (e2e)', () => {
       });
   });
 
-  it(`'/auth/confirm/{id}' returns 400 if OTP is invalid`, () => {
+  it(`POST '/auth/confirm/{id}' returns 400 if OTP is invalid`, () => {
     jest.spyOn(authService, 'checkOTP').mockResolvedValue(Result.fail('Fail'));
 
     return request(app.getHttpServer())
@@ -192,7 +186,7 @@ describe('Authentication (e2e)', () => {
       .expect(400);
   });
 
-  it(`'/auth/confirm/{id}' returns 200 if successfully confirmed OTP`, () => {
+  it(`POST '/auth/confirm/{id}' returns 200 if successfully confirmed OTP`, () => {
     jest
       .spyOn(authService, 'checkOTP')
       .mockResolvedValue(Result.ok('Success', null));
@@ -204,7 +198,7 @@ describe('Authentication (e2e)', () => {
       .expect(200);
   });
 
-  it(`'/auth/login' returns 401 if fails`, async () => {
+  it(`POST '/auth/login' returns 401 if fails`, async () => {
     jest.spyOn(authService, 'login').mockResolvedValue(Result.fail('Fail'));
 
     return request(app.getHttpServer())
@@ -213,7 +207,7 @@ describe('Authentication (e2e)', () => {
       .expect(401);
   });
 
-  it(`'/auth/login' returns 200 if user successfully signed in`, async () => {
+  it(`POST '/auth/login' returns 200 if user successfully signed in`, async () => {
     const loginFunc = jest.spyOn(authService, 'login').mockResolvedValue(
       Result.ok('Success', {
         accessToken: '',

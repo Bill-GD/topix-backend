@@ -43,7 +43,7 @@ import { ReactDto } from './dto/react.dto';
 import { PostService } from './post.service';
 
 @Controller('post')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedGuard, GetRequesterGuard)
 @ApiController()
 export class PostController {
   constructor(
@@ -52,7 +52,6 @@ export class PostController {
   ) {}
 
   @Post()
-  @UseGuards(GetRequesterGuard)
   @ApiFile('files', CreatePostDto, 'list')
   async create(
     @RequesterID() requesterId: number,
@@ -77,7 +76,6 @@ export class PostController {
   }
 
   @Get()
-  @UseGuards(GetRequesterGuard)
   async getAll(
     @Res({ passthrough: true }) response: Response,
     @Query() query: PostQuery,
@@ -89,7 +87,6 @@ export class PostController {
   }
 
   @Get('following')
-  @UseGuards(GetRequesterGuard)
   async getAllFollowing(
     @Res({ passthrough: true }) response: Response,
     @Query() query: CommonQuery,
@@ -101,7 +98,7 @@ export class PostController {
   }
 
   @Get(':id')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard)
   @ResourceExistConfig({
     name: 'Post',
     table: postTable,
@@ -116,7 +113,7 @@ export class PostController {
   }
 
   @Patch(':id')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
   @ResourceExistConfig({
     name: 'Post',
     table: postTable,
@@ -136,7 +133,7 @@ export class PostController {
   }
 
   @Delete(':id')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
   @ResourceExistConfig({
     name: 'Post',
     table: postTable,
@@ -154,7 +151,7 @@ export class PostController {
   }
 
   @Patch(':id/react')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard)
   @ResourceExistConfig({
     name: 'Post',
     table: postTable,
@@ -184,7 +181,7 @@ export class PostController {
   }
 
   @Delete(':id/react')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard)
   @ResourceExistConfig({
     name: 'Post',
     table: postTable,
@@ -199,7 +196,7 @@ export class PostController {
   }
 
   @Post(':id/reply')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard)
   @ResourceExistConfig({
     name: 'Post',
     table: postTable,

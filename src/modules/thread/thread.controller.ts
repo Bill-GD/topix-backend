@@ -43,7 +43,7 @@ import { Response } from 'express';
 import { ThreadService } from './thread.service';
 
 @Controller('thread')
-@UseGuards(AuthenticatedGuard)
+@UseGuards(AuthenticatedGuard, GetRequesterGuard)
 @ApiController()
 export class ThreadController {
   constructor(
@@ -52,7 +52,6 @@ export class ThreadController {
   ) {}
 
   @Get()
-  @UseGuards(GetRequesterGuard)
   async getAll(
     @Res({ passthrough: true }) response: Response,
     @Query() query: ThreadQuery,
@@ -64,7 +63,7 @@ export class ThreadController {
   }
 
   @Get(':id')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard)
   @ResourceExistConfig({
     name: 'Thread',
     table: threadTable,
@@ -79,7 +78,6 @@ export class ThreadController {
   }
 
   @Post()
-  @UseGuards(GetRequesterGuard)
   async createThread(
     @RequesterID() requesterId: number,
     @Body() dto: CreateThreadDto,
@@ -89,7 +87,7 @@ export class ThreadController {
   }
 
   @Post(':id/post')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
   @ResourceExistConfig({
     name: 'Thread',
     table: threadTable,
@@ -138,7 +136,7 @@ export class ThreadController {
   }
 
   @Post(':id/follow')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard)
   @ResourceExistConfig({
     name: 'Thread',
     table: threadTable,
@@ -156,7 +154,7 @@ export class ThreadController {
   }
 
   @Patch(':id')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
   @ResourceExistConfig({
     name: 'Thread',
     table: threadTable,
@@ -176,7 +174,7 @@ export class ThreadController {
   }
 
   @Delete(':id/follow')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard)
+  @UseGuards(ResourceExistGuard)
   @ResourceExistConfig({
     name: 'Thread',
     table: threadTable,
@@ -194,7 +192,7 @@ export class ThreadController {
   }
 
   @Delete(':id')
-  @UseGuards(ResourceExistGuard, GetRequesterGuard, ResourceOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
   @ResourceExistConfig({
     name: 'Thread',
     table: threadTable,
