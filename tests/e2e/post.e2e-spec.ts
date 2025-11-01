@@ -53,7 +53,7 @@ describe('Account (e2e)', () => {
       await app.init();
     });
 
-    beforeEach(() => jest.clearAllMocks());
+    afterEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(postService).toBeDefined();
@@ -248,7 +248,7 @@ describe('Account (e2e)', () => {
       await app.init();
     });
 
-    beforeEach(() => jest.clearAllMocks());
+    afterEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(postService).toBeDefined();

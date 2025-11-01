@@ -49,7 +49,7 @@ describe('User (e2e)', () => {
       await app.init();
     });
 
-    beforeEach(() => jest.clearAllMocks());
+    afterEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(userService).toBeDefined();
@@ -152,7 +152,7 @@ describe('User (e2e)', () => {
       await app.init();
     });
 
-    beforeEach(() => jest.clearAllMocks());
+    afterEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(userService).toBeDefined();
@@ -261,7 +261,7 @@ describe('User (e2e)', () => {
       await app.init();
     });
 
-    beforeEach(() => jest.clearAllMocks());
+    afterEach(() => jest.clearAllMocks());
 
     it('dependencies should be defined', () => {
       expect(userService).toBeDefined();
@@ -294,5 +294,7 @@ describe('User (e2e)', () => {
           expect(deleteFunc).toHaveBeenCalledWith('testuser');
         });
     });
+
+    afterAll(async () => await app.close());
   });
 });
