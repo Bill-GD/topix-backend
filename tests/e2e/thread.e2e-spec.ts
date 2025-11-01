@@ -61,7 +61,7 @@ describe('Thread (e2e)', () => {
     expect(app.get(ThreadController)).toBeDefined();
   });
 
-  it(`GET '/thread' returns threead list with pagination header`, async () => {
+  it(`GET '/thread' returns thread list with pagination header`, async () => {
     const getAllFunc = jest
       .spyOn(threadService, 'getAll')
       .mockResolvedValue(Result.ok('Success', []));
@@ -76,7 +76,7 @@ describe('Thread (e2e)', () => {
   });
 
   it(`POST '/thread' returns 201 if successful`, () => {
-    const uploadFunc = jest
+    const createFunc = jest
       .spyOn(threadService, 'create')
       .mockResolvedValue(Result.ok('Success', 1));
 
@@ -85,7 +85,7 @@ describe('Thread (e2e)', () => {
       .send({ title: 'thread title' })
       .expect(201)
       .then(() => {
-        expect(uploadFunc).toHaveBeenCalledWith({ title: 'thread title' }, 1);
+        expect(createFunc).toHaveBeenCalledWith({ title: 'thread title' }, 1);
       });
   });
 
@@ -124,6 +124,7 @@ describe('Thread (e2e)', () => {
 
     return request(app.getHttpServer())
       .post('/thread/0/post')
+      .send({ content: 'post content' })
       .expect(201)
       .then(() => {
         expect(addPostFunc).toHaveBeenCalled();
@@ -135,7 +136,7 @@ describe('Thread (e2e)', () => {
 
   it(`thread fetching routes return 404 if thread doesn't exist`, () => {
     mockDB.$count.mockResolvedValue(0);
-    request(app.getHttpServer()).get('/post/0').expect(404);
+    request(app.getHttpServer()).get('/thread/0').expect(404);
     request(app.getHttpServer()).post('/thread/0/post').expect(404);
     request(app.getHttpServer()).post('/thread/0/follow').expect(404);
     request(app.getHttpServer()).patch('/thread/0').expect(404);

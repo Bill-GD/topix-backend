@@ -24,7 +24,7 @@ import {
   resourceOwnerGuardMock,
 } from './test-helper';
 
-describe('Account (e2e)', () => {
+describe('Post (e2e)', () => {
   describe('normal user', () => {
     let app: INestApplication<App>;
     let postService: PostService;
