@@ -3,6 +3,7 @@ import {
   applyDecorators,
   BadRequestException,
   createParamDecorator,
+  SetMetadata,
   Type,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,8 +16,16 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
+import { MySqlColumn, MySqlTable } from 'drizzle-orm/mysql-core';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
+
+export const DecoratorKeys = {
+  userExistConfig: 'UserExistConfig',
+  accountInfoConfig: 'AccountInfoConfig',
+  resourceExistConfig: 'ResourceExistConfig',
+  resourceOwnerConfig: 'ResourceOwnerConfig',
+} as const;
 
 export function ApiController(...extraMimeTypes: string[]) {
   return applyDecorators(
@@ -57,6 +66,36 @@ export const WsRequesterID = createParamDecorator((data, context) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   return client.data.userId as number;
 });
+
+export function UserExistConfig(config: { check: 'id' | 'username' }) {
+  return SetMetadata(DecoratorKeys.userExistConfig, config.check);
+}
+
+export function AccountInfoConfig(config: {
+  shouldExist: boolean;
+  checks: ('email' | 'username')[];
+}) {
+  return SetMetadata(DecoratorKeys.accountInfoConfig, config);
+}
+
+export function ResourceExistConfig(
+  ...resources: {
+    name?: string;
+    table: MySqlTable;
+    resourceIdColumn: MySqlColumn;
+  }[]
+) {
+  return SetMetadata(DecoratorKeys.resourceExistConfig, resources);
+}
+
+export function ResourceOwnerConfig(resource: {
+  table: MySqlTable;
+  resourceUserIdColumn: MySqlColumn;
+  resourceIdColumn: MySqlColumn;
+  allowAdmin?: boolean;
+}) {
+  return SetMetadata(DecoratorKeys.resourceOwnerConfig, resource);
+}
 
 export function IsNotEmptyString() {
   return applyDecorators(IsString(), IsNotEmpty());

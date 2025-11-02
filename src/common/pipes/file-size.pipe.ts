@@ -10,9 +10,11 @@ import {
 @Injectable()
 export class FileSizeValidatorPipe implements PipeTransform {
   transform(
-    value: Array<Express.Multer.File> | Express.Multer.File,
+    value: Array<Express.Multer.File> | Express.Multer.File | undefined,
     metadata: ArgumentMetadata,
   ) {
+    if (!value) return value;
+
     const files: Array<Express.Multer.File> = [];
     if (!Array.isArray(value)) files.push(value);
     else files.push(...value);

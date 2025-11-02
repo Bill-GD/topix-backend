@@ -3,6 +3,7 @@ import {
   BadRequestException,
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -27,12 +28,12 @@ export class RefreshTokenGuard implements CanActivate {
     try {
       const token = this.jwt.verify<JwtUserPayload>(authToken);
       if (token.type !== 'refresh') {
-        throw new JsonWebTokenError('Invalid token provided.');
+        throw new ForbiddenException('Invalid token provided.');
       }
     } catch (err) {
-      if (err instanceof JsonWebTokenError) {
-        throw new UnauthorizedException(err.message);
-      }
+      throw err instanceof JsonWebTokenError
+        ? new UnauthorizedException(err.message)
+        : err;
     }
 
     return true;

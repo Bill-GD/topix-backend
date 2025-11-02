@@ -4,8 +4,8 @@ import { chatChannelTable } from '@/database/schemas';
 import {
   BadRequestException,
   CanActivate,
-  ConflictException,
   ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
 } from '@nestjs/common';
@@ -37,7 +37,7 @@ export class ChatChannelOwnerGuard implements CanActivate {
     );
 
     if (count <= 0) {
-      throw new ConflictException(`User do not own the channel.`);
+      throw new ForbiddenException(`User do not own the channel.`);
     }
     return true;
   }

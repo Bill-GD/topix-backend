@@ -1,16 +1,22 @@
-import { ApiController, ApiFile, RequesterID } from '@/common/decorators';
+import {
+  ApiController,
+  ApiFile,
+  RequesterID,
+  ResourceExistConfig,
+  ResourceOwnerConfig,
+} from '@/common/decorators';
 import {
   AuthenticatedGuard,
   GetRequesterGuard,
-  GroupExistGuard,
-  GroupOwnerGuard,
-  TagExistGuard,
+  ResourceExistGuard,
+  ResourceOwnerGuard,
 } from '@/common/guards';
 import { FileSizeValidatorPipe } from '@/common/pipes';
 import { GroupQuery, MemberQuery } from '@/common/queries';
 import { ImageSizeLimit } from '@/common/utils/constants';
 import { ControllerResponse } from '@/common/utils/controller-response';
-import { getReadableSize, addPaginateHeader } from '@/common/utils/helpers';
+import { addPaginateHeader, getReadableSize } from '@/common/utils/helpers';
+import { groupTable, tagTable } from '@/database/schemas';
 import { CreateTagDto } from '@/modules/group/dto/create-tag.dto';
 import { CreatePostDto } from '@/modules/post/dto/create-post.dto';
 import { CreateThreadDto } from '@/modules/thread/dto/create-thread.dto';
@@ -83,7 +89,12 @@ export class GroupController {
   }
 
   @Get(':id')
-  @UseGuards(GroupExistGuard)
+  @UseGuards(ResourceExistGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
   async getOne(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -109,7 +120,12 @@ export class GroupController {
   }
 
   @Get(':id/members')
-  @UseGuards(GroupExistGuard)
+  @UseGuards(ResourceExistGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
   async getAllMembers(
     @Res({ passthrough: true }) response: Response,
     @Query() query: MemberQuery,
@@ -121,7 +137,12 @@ export class GroupController {
   }
 
   @Post(':id/join')
-  @UseGuards(GroupExistGuard)
+  @UseGuards(ResourceExistGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
   async joinGroup(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -131,7 +152,12 @@ export class GroupController {
   }
 
   @Post(':id/post')
-  @UseGuards(GroupExistGuard)
+  @UseGuards(ResourceExistGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
   @ApiFile('files', CreatePostDto, 'list')
   async addPost(
     @Param('id', ParseIntPipe) groupId: number,
@@ -151,13 +177,18 @@ export class GroupController {
     files: Array<Express.Multer.File>,
     @Body() dto: CreatePostDto,
   ) {
-    if (files) dto.fileObjects = files;
+    if (files && files.length > 0) dto.fileObjects = files;
     const res = await this.groupService.addPost(groupId, requesterId, dto);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.CREATED);
   }
 
   @Post(':id/thread')
-  @UseGuards(GroupExistGuard)
+  @UseGuards(ResourceExistGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
   async addThread(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -168,7 +199,17 @@ export class GroupController {
   }
 
   @Post(':id/tag')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async addTag(
     @Param('id', ParseIntPipe) groupId: number,
     @Body() dto: CreateTagDto,
@@ -178,7 +219,17 @@ export class GroupController {
   }
 
   @Post(':id/change-owner')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async changeOwner(
     @Param('id', ParseIntPipe) groupId: number,
     @Body() dto: { newOwnerId: number },
@@ -188,7 +239,17 @@ export class GroupController {
   }
 
   @Post(':id/member/:userId')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async acceptMember(
     @Param('id', ParseIntPipe) groupId: number,
     @Param('userId', ParseIntPipe) userId: number,
@@ -198,7 +259,17 @@ export class GroupController {
   }
 
   @Post(':id/post/:postId')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async acceptPost(@Param('postId', ParseIntPipe) postId: number) {
     const res = await this.groupService.acceptPost(postId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
@@ -206,7 +277,17 @@ export class GroupController {
 
   @Patch(':id')
   @ApiFile('banner', UpdateGroupDto, 'single')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async update(
     @Param('id', ParseIntPipe) groupId: number,
     @UploadedFile(
@@ -229,7 +310,12 @@ export class GroupController {
   }
 
   @Delete(':id/member')
-  @UseGuards(GroupExistGuard)
+  @UseGuards(ResourceExistGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
   async leaveGroup(
     @Param('id', ParseIntPipe) groupId: number,
     @RequesterID() requesterId: number,
@@ -243,14 +329,41 @@ export class GroupController {
   }
 
   @Delete(':id/tag/:tagId')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard, TagExistGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig(
+    {
+      name: 'Group',
+      table: groupTable,
+      resourceIdColumn: groupTable.id,
+    },
+    {
+      name: 'Tag',
+      table: tagTable,
+      resourceIdColumn: tagTable.id,
+    },
+  )
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async removeTag(@Param('tagId', ParseIntPipe) tagId: number) {
     const res = await this.groupService.removeTag(tagId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 
   @Delete(':id/member/:userId')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async deleteMember(
     @Param('id', ParseIntPipe) groupId: number,
     @Param('userId', ParseIntPipe) userId: number,
@@ -260,7 +373,17 @@ export class GroupController {
   }
 
   @Delete(':id')
-  @UseGuards(GroupExistGuard, GroupOwnerGuard)
+  @UseGuards(ResourceExistGuard, ResourceOwnerGuard)
+  @ResourceExistConfig({
+    name: 'Group',
+    table: groupTable,
+    resourceIdColumn: groupTable.id,
+  })
+  @ResourceOwnerConfig({
+    table: groupTable,
+    resourceUserIdColumn: groupTable.ownerId,
+    resourceIdColumn: groupTable.id,
+  })
   async remove(@Param('id', ParseIntPipe) groupId: number) {
     const res = await this.groupService.remove(groupId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);

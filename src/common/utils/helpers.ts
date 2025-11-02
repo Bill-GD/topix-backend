@@ -17,7 +17,7 @@ export function getReadableSize(byte: number): string {
   let size = byte;
   const postfix = ['B', 'KB', 'MB', 'GB'];
   let postfixIndex = 0;
-  while (size > 1024) {
+  while (size >= 1024) {
     size /= 1024;
     postfixIndex++;
   }

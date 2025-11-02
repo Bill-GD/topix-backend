@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -17,6 +18,10 @@ export class IsAdminGuard implements CanActivate {
       );
     }
 
-    return req.userRole === 'admin';
+    if (req.userRole !== 'admin') {
+      throw new ForbiddenException('User does not have access to this action.');
+    }
+
+    return true;
   }
 }
