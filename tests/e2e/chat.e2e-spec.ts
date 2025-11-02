@@ -197,7 +197,7 @@ describe('Chat (e2e)', () => {
       chatService = app.get(ChatService);
       await app.listen(3000);
 
-      client = io('http://localhost:3000/chatws');
+      client = io(`${await app.getUrl()}/chatws`);
     });
 
     afterEach(() => jest.clearAllMocks());
