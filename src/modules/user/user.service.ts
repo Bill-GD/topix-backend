@@ -116,6 +116,14 @@ export class UserService {
         userId: requesterId,
         followedId: userId,
       });
+      await this.db
+        .update(profileTable)
+        .set({ followingCount: sql`${profileTable.followingCount} + 1` })
+        .where(eq(profileTable.userId, requesterId));
+      await this.db
+        .update(profileTable)
+        .set({ followerCount: sql`${profileTable.followerCount} + 1` })
+        .where(eq(profileTable.userId, userId));
     } catch (e) {
       return Result.fail('User already followed.');
     }
@@ -131,6 +139,14 @@ export class UserService {
           eq(followTable.userId, requesterId),
         ),
       );
+    await this.db
+      .update(profileTable)
+      .set({ followingCount: sql`${profileTable.followingCount} - 1` })
+      .where(eq(profileTable.userId, requesterId));
+    await this.db
+      .update(profileTable)
+      .set({ followerCount: sql`${profileTable.followerCount} - 1` })
+      .where(eq(profileTable.userId, userId));
     return Result.ok('Unfollowed user successfully', null);
   }
 
