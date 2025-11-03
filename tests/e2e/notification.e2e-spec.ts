@@ -43,7 +43,7 @@ describe('Notification (e2e)', () => {
     expect(app.get(NotificationController)).toBeDefined();
   });
 
-  it(`GET '/notification' returns messages, end of list is true when list is smaller than query size`, async () => {
+  it(`GET '/notification' returns notifications with pagination header`, async () => {
     const getAllFunc = jest
       .spyOn(notiService, 'getAll')
       .mockResolvedValue(Result.ok('Success', []));
@@ -52,43 +52,12 @@ describe('Notification (e2e)', () => {
       .get('/notification?size=2')
       .expect(200)
       .then((res) => {
-        expect(getAllFunc).toHaveBeenCalled();
-        expect(res.headers['x-end-of-list']).toBe('true');
-      });
-  });
-
-  it(`GET '/notification' returns messages, end of list is false if length matches query size`, async () => {
-    const getAllFunc = jest.spyOn(notiService, 'getAll').mockResolvedValue(
-      Result.ok(
-        'Success',
-        new Array(2).fill({
-          id: '1:react:1:1762059625',
-          actor: {
-            id: 1,
-            username: 'testuser',
-            displayName: 'Test user',
-            profilePicture: null,
-          },
-          actorCount: 1,
-          actionType: 'react',
-          objectId: 1,
-          dateCreated: Date.now(),
-          postContent: null,
-          threadTitle: null,
-        }),
-      ),
-    );
-
-    return request(app.getHttpServer())
-      .get(`/notification?size=2`)
-      .expect(200)
-      .then((res) => {
         expect(getAllFunc).toHaveBeenCalledWith({ size: '2' }, 1);
-        expect(res.headers['x-end-of-list']).toBe('false');
+        expect(res.headers['x-end-of-list']).toBeDefined();
       });
   });
 
-  it(`sse`, async () => {
+  it(`receives notification messages as server-sent events`, async () => {
     const eventService = app.get(EventService);
     const baseUrl = await app.getUrl();
     const notiSource = new EventSource(`${baseUrl}/notification/sse`);

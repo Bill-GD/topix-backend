@@ -12,6 +12,7 @@ import { UserController } from '@/modules/user/user.controller';
 import { UserModule } from '@/modules/user/user.module';
 import { UserService } from '@/modules/user/user.service';
 import { INestApplication } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
@@ -28,9 +29,15 @@ describe('User (e2e)', () => {
     mockDB as unknown as DBType,
   );
 
-  describe('with user exist check', () => {
+  describe('normal user', () => {
     let app: INestApplication<App>;
     let userService: UserService;
+    let notiService: NotificationService;
+    let eventService: EventService;
+    const userExistGuardMock = new UserExistGuard(
+      mockDB as unknown as DBType,
+      new Reflector(),
+    );
 
     beforeAll(async () => {
       const moduleRef: TestingModule = await Test.createTestingModule({
@@ -40,12 +47,18 @@ describe('User (e2e)', () => {
         .useValue(defaultGuardMock)
         .overrideGuard(GetRequesterGuard)
         .useValue(mockRequesterGuard(1, 'user'))
+        .overrideGuard(UserExistGuard)
+        .useValue(userExistGuardMock)
+        .overrideGuard(AccountOwnerGuard)
+        .useValue(accountOwnerGuardMock)
         .compile();
 
       app = moduleRef.createNestApplication();
       applyGlobalEnhancers(app);
 
       userService = app.get(UserService);
+      notiService = app.get(NotificationService);
+      eventService = app.get(EventService);
       await app.init();
     });
 
@@ -53,6 +66,8 @@ describe('User (e2e)', () => {
 
     it('dependencies should be defined', () => {
       expect(userService).toBeDefined();
+      expect(notiService).toBeDefined();
+      expect(eventService).toBeDefined();
       expect(app.get(UserController)).toBeDefined();
     });
 
@@ -120,48 +135,8 @@ describe('User (e2e)', () => {
         });
     });
 
-    afterAll(async () => await app.close());
-  });
-
-  describe('without user exist check', () => {
-    let app: INestApplication<App>;
-    let userService: UserService;
-    let notiService: NotificationService;
-    let eventService: EventService;
-
-    beforeAll(async () => {
-      const moduleRef: TestingModule = await Test.createTestingModule({
-        imports: [UserModule, ...getGlobalModules()],
-      })
-        .overrideGuard(AuthenticatedGuard)
-        .useValue(defaultGuardMock)
-        .overrideGuard(GetRequesterGuard)
-        .useValue(mockRequesterGuard(1, 'user'))
-        .overrideGuard(UserExistGuard)
-        .useValue(defaultGuardMock)
-        .overrideGuard(AccountOwnerGuard)
-        .useValue(accountOwnerGuardMock)
-        .compile();
-
-      app = moduleRef.createNestApplication();
-      applyGlobalEnhancers(app);
-
-      userService = app.get(UserService);
-      notiService = app.get(NotificationService);
-      eventService = app.get(EventService);
-      await app.init();
-    });
-
-    afterEach(() => jest.clearAllMocks());
-
-    it('dependencies should be defined', () => {
-      expect(userService).toBeDefined();
-      expect(notiService).toBeDefined();
-      expect(eventService).toBeDefined();
-      expect(app.get(UserController)).toBeDefined();
-    });
-
     it(`GET '/user/username' returns 200 if user was found`, () => {
+      mockDB.$count.mockResolvedValue(1);
       const getByUsernameFunc = jest
         .spyOn(userService, 'getUserByUsername')
         .mockResolvedValue({
@@ -185,7 +160,33 @@ describe('User (e2e)', () => {
         });
     });
 
+    it(`GET '/user/username' returns 404 if user wasn't found`, () => {
+      mockDB.$count.mockResolvedValue(0);
+      const getByUsernameFunc = jest
+        .spyOn(userService, 'getUserByUsername')
+        .mockResolvedValue({
+          id: 1,
+          username: 'testusername',
+          displayName: 'test user',
+          profilePicture: null,
+          role: 'user',
+          description: null,
+          followerCount: 0,
+          followingCount: 0,
+          followed: true,
+          chatChannelId: 1,
+        });
+
+      return request(app.getHttpServer())
+        .get('/user/fakeusername')
+        .expect(404)
+        .then(() => {
+          expect(getByUsernameFunc).not.toHaveBeenCalled();
+        });
+    });
+
     it(`POST '/user/:id/follow' returns 200 and sent notification`, () => {
+      mockDB.$count.mockResolvedValue(1);
       const followFunc = jest
         .spyOn(userService, 'followUser')
         .mockResolvedValue(Result.ok('Success', null));
@@ -207,6 +208,7 @@ describe('User (e2e)', () => {
     });
 
     it(`DELETE '/user/:id/follow' returns 200`, () => {
+      mockDB.$count.mockResolvedValue(1);
       const unfollowFunc = jest
         .spyOn(userService, 'unfollowUser')
         .mockResolvedValue(Result.ok('Success', null));
@@ -220,6 +222,7 @@ describe('User (e2e)', () => {
     });
 
     it(`user can't delete other user account`, () => {
+      mockDB.$count.mockResolvedValue(1);
       const deleteFunc = jest
         .spyOn(userService, 'deleteUser')
         .mockResolvedValue(Result.fail('Fail'));

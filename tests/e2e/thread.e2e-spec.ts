@@ -105,7 +105,7 @@ describe('Thread (e2e)', () => {
       });
   });
 
-  it(`adding post to thread successfully notifies all follower`, () => {
+  it(`POST '/thread/:id/post' adds post to thread successfully, and notifies all followers`, () => {
     mockDB.$count.mockResolvedValue(1);
     mockDB.where.mockResolvedValue([{ id: 1 }]);
 

@@ -66,7 +66,7 @@ describe('Authentication (e2e)', () => {
     expect(app.get(AuthController)).toBeDefined();
   });
 
-  it(`POST '/auth/refresh' returns 403 if refresh token not provided when refreshing`, () => {
+  it(`POST '/auth/refresh' returns 400 if refresh token not provided when refreshing`, () => {
     const accessToken = jwtService.sign({
       sub: 1,
       role: 'user',
@@ -75,7 +75,7 @@ describe('Authentication (e2e)', () => {
     return request(app.getHttpServer())
       .post('/auth/refresh')
       .set('Authorization', `Bearer ${accessToken}`)
-      .expect(403);
+      .expect(400);
   });
 
   it(`POST '/auth/refresh' returns refresh token with its age`, () => {
@@ -130,15 +130,24 @@ describe('Authentication (e2e)', () => {
       .expect(400);
   });
 
-  it(`POST '/auth/register' returns 400 if password too short`, () => {
+  it(`POST '/auth/register' returns 400 if password length is not between 8 and 20`, async () => {
     jest.spyOn(authService, 'register').mockResolvedValue(1);
 
-    return request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post('/auth/register')
       .send({
         email: 'example@gmail.com',
         username: 'test-username',
         password: 'short',
+        confirmPassword: 'wrongconfirmpassword',
+      } as RegisterDto)
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'example@gmail.com',
+        username: 'test-username',
+        password: 'amuchlongerthanrequiredpassword',
         confirmPassword: 'wrongconfirmpassword',
       } as RegisterDto)
       .expect(400);

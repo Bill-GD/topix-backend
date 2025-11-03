@@ -81,7 +81,7 @@ describe('Group (e2e)', () => {
       });
   });
 
-  it(`GET '/group/members' returns group member list with pagination header`, async () => {
+  it(`GET '/group/:id/members' returns group member list with pagination header`, async () => {
     mockDB.$count.mockResolvedValue(1);
     const getAllFunc = jest
       .spyOn(groupService, 'getAllMembers')

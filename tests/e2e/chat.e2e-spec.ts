@@ -208,6 +208,14 @@ describe('Chat (e2e)', () => {
       expect(app.get(ChatGateway)).toBeDefined();
     });
 
+    it(`web socket host url should be correct and can be connected`, (done) => {
+      client.connect();
+      client.on('connect', () => {
+        expect(client.connected).toBe(true);
+        done();
+      });
+    });
+
     it(`'join' event should return socket room ID`, (done) => {
       client.emit('join', { channelId: 1 }, (data: string) => {
         expect(data).toContain('chatchannel:1');

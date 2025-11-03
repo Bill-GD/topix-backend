@@ -33,9 +33,7 @@ export class UserExistGuard implements CanActivate {
         userTable,
         eq(userTable.username, req.params.username),
       );
-    }
-
-    if (check === 'id' && !isNaN(Number(req.params.id))) {
+    } else if (check === 'id' && !isNaN(Number(req.params.id))) {
       count = await this.db.$count(
         userTable,
         eq(userTable.id, Number(req.params.id)),
