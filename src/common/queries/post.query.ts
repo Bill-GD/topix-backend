@@ -53,6 +53,8 @@ export class PostQuery extends CommonQuery {
   tagId?: number;
 
   @ApiPropertyOptional()
+  @Type(() => String)
+  @Transform(({ value }) => (value as string).toLowerCase() === 'true')
   @IsBoolean()
   @IsOptional()
   approved?: boolean;
