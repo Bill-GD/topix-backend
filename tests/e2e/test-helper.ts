@@ -6,6 +6,7 @@ import {
 } from '@/common/guards';
 import { ResponseInterceptor } from '@/common/interceptors';
 import { DBType } from '@/common/utils/types';
+import { CategorizationModule } from '@/modules/categorization/categorization.module';
 import { CloudinaryModule } from '@/modules/cloudinary.module';
 import { CryptoModule } from '@/modules/crypto/crypto.module';
 import { DatabaseModule } from '@/modules/database.module';
@@ -29,6 +30,7 @@ export function getGlobalModules() {
     MailerModule,
     FileModule,
     CryptoModule,
+    CategorizationModule,
   ];
 }
 

@@ -1,5 +1,6 @@
 import { DecryptTokenMiddleware } from '@/common/middlewares';
 import { AuthModule } from '@/modules/auth/auth.module';
+import { CategorizationModule } from '@/modules/categorization/categorization.module';
 import { ChatModule } from '@/modules/chat/chat.module';
 import { CloudinaryModule } from '@/modules/cloudinary.module';
 import { CryptoModule } from '@/modules/crypto/crypto.module';
@@ -28,6 +29,7 @@ import * as process from 'node:process';
     MailerModule,
     FileModule,
     CryptoModule,
+    CategorizationModule,
     AuthModule,
     UserModule,
     PostModule,

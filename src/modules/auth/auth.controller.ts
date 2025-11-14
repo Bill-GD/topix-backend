@@ -18,6 +18,8 @@ import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { OtpDto } from '@/modules/auth/dto/otp.dto';
 import { PasswordCheckDto } from '@/modules/auth/dto/password-check.dto';
 import { RegisterDto } from '@/modules/auth/dto/register.dto';
+import { CategorizationService } from '@/modules/categorization/categorization.service';
+import { CategorizeDto } from '@/modules/categorization/dto/categorize.dto';
 import {
   BadRequestException,
   Body,
@@ -33,13 +35,98 @@ import {
 @Controller('auth')
 @ApiController()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly categorizeService: CategorizationService,
+  ) {}
 
   @Post('refresh')
   @UseGuards(RefreshTokenGuard, GetRequesterGuard)
   async refreshAccess(@RequesterID() requesterId: number) {
     const res = await this.authService.refresh(requesterId);
     return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
+  }
+
+  @Post('test-llm')
+  async categorizeText(@Body() dto: CategorizeDto) {
+    const res = await this.categorizeService.categorize(
+      dto.text,
+      [
+        'computer science',
+        'information technology',
+        'technology',
+        'car',
+        'vehicle',
+        'job',
+        'coding',
+        'web dev',
+        'game dev',
+        'development',
+        'art',
+        'ai',
+        'business',
+        'economy',
+        'computer',
+        'hardware',
+        'software',
+        'frontend',
+        'fullstack',
+        'backend',
+        'gaming',
+        'video game',
+        'board game',
+        'health',
+        'home',
+        'furniture',
+        'nature',
+        'exploration',
+        'hiking',
+        'funny',
+        'meme',
+        'science',
+        'space',
+        'society',
+        'sports',
+        'football',
+        'baseball',
+        'soccer',
+        'reply',
+        'sarcastic',
+        'joke',
+        'university',
+        'college',
+        'live streaming',
+        'social media',
+        'streamer',
+        'youtuber',
+        'drama',
+        'vtuber',
+        'school',
+        'homework',
+        'teacher',
+        'family',
+        'sibling',
+        'holidays',
+        'beach',
+        'forest',
+        'camping',
+        'internet drama',
+        'internet',
+        'marriage',
+        'lover',
+        'war',
+        'conflict',
+        'police',
+        'international',
+        'criminal',
+        'anime',
+        'manga',
+        'entertainment',
+        'discussion',
+      ],
+      10,
+    );
+    return ControllerResponse.ok('OK', res, HttpStatus.OK);
   }
 
   @Post('password-check')
