@@ -142,15 +142,13 @@ export class PostService implements OnModuleInit {
   async getAll(postQuery: PostQuery, requesterId: number) {
     const andQueries: SQL[] = [];
 
+    andQueries.push(eq(postTable.groupApproved, postQuery.approved));
     if (postQuery.groupId) {
       andQueries.push(
         eq(postTable.groupId, postQuery.groupId),
         isNull(postTable.threadId),
         isNull(postTable.parentPostId),
       );
-      if (postQuery.approved !== undefined) {
-        andQueries.push(eq(postTable.groupApproved, postQuery.approved));
-      }
       if (postQuery.tagId) andQueries.push(eq(tagTable.id, postQuery.tagId));
       else if (postQuery.tagName) {
         andQueries.push(like(tagTable.name, `%${postQuery.tagName}%`));
