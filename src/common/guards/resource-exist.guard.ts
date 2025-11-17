@@ -33,7 +33,7 @@ export class ResourceExistGuard implements CanActivate {
     for (const resource of resources) {
       const count = await this.db.$count(
         resource.table,
-        eq(resource.resourceIdColumn, Number(req.params.id)),
+        eq(resource.resourceIdColumn, req.params.id),
       );
 
       if (count <= 0) {
