@@ -394,7 +394,10 @@ export class PostService implements OnModuleInit {
 
     await this.db
       .update(postTable)
-      .set({ replyCount: sql`${postTable.replyCount} + 1` })
+      .set({
+        replyCount: sql`${postTable.replyCount} + 1`,
+        dateUpdated: sql`${postTable.dateUpdated}`,
+      })
       .where(eq(postTable.id, postId));
 
     if (dto.fileObjects) {
@@ -426,7 +429,10 @@ export class PostService implements OnModuleInit {
     if (posts[0].parentPostId) {
       await this.db
         .update(postTable)
-        .set({ replyCount: sql`${postTable.replyCount} - 1` })
+        .set({
+          replyCount: sql`${postTable.replyCount} - 1`,
+          dateUpdated: sql`${postTable.dateUpdated}`,
+        })
         .where(eq(postTable.id, posts[0].parentPostId));
     }
 
