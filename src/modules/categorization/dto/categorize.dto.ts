@@ -1,8 +1,13 @@
-import { IsNotEmptyString } from '@/common/decorators';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsOptionalString } from '@/common/decorators';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray } from 'class-validator';
 
 export class CategorizeDto {
   @ApiProperty()
-  @IsNotEmptyString()
-  text: string;
+  @IsOptionalString()
+  text: string = '';
+
+  @ApiPropertyOptional()
+  @IsArray()
+  fileUrls: string[] = [];
 }

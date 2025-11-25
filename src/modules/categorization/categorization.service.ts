@@ -1,30 +1,80 @@
+import { createUserContent, GoogleGenAI } from '@google/genai';
 import { Injectable } from '@nestjs/common';
-import { pipeline, ZeroShotClassificationOutput } from '@xenova/transformers';
 
 @Injectable()
 export class CategorizationService {
-  async categorize(
-    text: string,
-    categories: string[],
-    resultCount: number = 5,
-  ) {
-    const classifier = await pipeline(
-      'zero-shot-classification',
-      'Xenova/bart-large-mnli',
-    );
-    const output = await classifier(text, categories);
+  private readonly ai = new GoogleGenAI({});
 
-    const scores = (output as ZeroShotClassificationOutput).scores.slice(
-      0,
-      resultCount,
-    );
-    const results = (output as ZeroShotClassificationOutput).labels
-      .slice(0, resultCount)
-      .map((e, i) => ({
-        label: e,
-        score: scores[i],
-      }));
+  async categorize(text: string, mediaUrls: string[], resultCount: number = 5) {
+    // const uploadedFiles =
+    //   mediaUrls.length > 0
+    //     ? await Promise.all(
+    //         mediaUrls
+    //           .filter((m) => !m.includes('.gif') && !m.includes('.mkv'))
+    //           .map((m) => this.ai.files.upload({ file: m })),
+    //       )
+    //     : [];
 
-    return results;
+    // const imageRes = await fetch(mediaUrls[0]);
+    // const imageArrayBuffer = await imageRes.arrayBuffer();
+    // const base64ImageData = Buffer.from(imageArrayBuffer).toString('base64');
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-2.5-flash-lite',
+      contents: createUserContent([
+        `0-${resultCount} catogorie(s) for a SM post:\n` +
+          `-format '<cate_1>,<0-1.0>|<cate_2>,<0-1.0>|...'(name w/ score)\n` +
+          `-lowercase, underscore as space between words, no extra response\n` +
+          `-name should be general enough->increase category hit chance\n` +
+          `-less category (0-4) if generic/unclear, if none, no result` +
+          // (mediaUrls.length > 0
+          //   ? `-post contain media, categorize using those as well\n`
+          // + `-Media URLs:\n${mediaUrls.join('\n')}`
+          //     : '') +
+          `-post content: '${text}'`,
+        // `-post content: ${text.length > 0 ? `'${text}'` : 'none, only media'}`,
+        // {
+        //   inlineData: {
+        //     mimeType: 'image/png',
+        //     data: base64ImageData,
+        //   },
+        // },
+        // ...mediaUrls
+        //   .filter((m) => !m.includes('.gif') && !m.includes('.mkv'))
+        //   .map((url) => {
+        //     const fileExt = url.split('.').at(-1);
+        //     const type = url.split('/upload')[0].split('/').at(-1);
+        //     return createPartFromUri(url, `${type}/${fileExt}`);
+        //   }),
+      ]),
+    });
+    return response.text?.split('|');
   }
 }
+
+// const uploadedFiles = mediaUrls.map((m) => {
+//   const fileExt = m.split('.').at(-1);
+//   const type = m.split('/upload')[0].split('/').at(-1);
+//
+//   return {
+//     uri: m,
+//     mimeType: `${type}/${fileExt}`,
+//   };
+// });
+//
+// const response = await this.ai.models.generateContent({
+//   model: 'gemini-2.5-flash-lite',
+//   contents: createUserContent([
+//     `0-${resultCount} catogorie(s) for a SM post:\n` +
+//     `-format '<cate_1>,<0-1.0>|<cate_2>,<0-1.0>|...'(name w/ score)\n` +
+//     `-lowercase,space is underscore,no extra response\n` +
+//     `-name should be general enough->increase category hit chance\n` +
+//     `-less category (0-4) if generic/unclear` +
+//     (uploadedFiles.length > 0
+//       ? `-post contain media, categorize using those as well\n`
+//       : '') +
+//     `-post content: '${text}'`,
+//     ...uploadedFiles.map((f) => createPartFromUri(f.uri, f.mimeType)),
+//   ]),
+// });
+// return response.text?.split('|');
