@@ -15,30 +15,32 @@ export class CategorizationService {
     //       )
     //     : [];
 
-    // const imageRes = await fetch(mediaUrls[0]);
-    // const imageArrayBuffer = await imageRes.arrayBuffer();
-    // const base64ImageData = Buffer.from(imageArrayBuffer).toString('base64');
+    const imageRes = await fetch(mediaUrls[0]);
+    const imageArrayBuffer = await imageRes.arrayBuffer();
+    const base64ImageData = Buffer.from(imageArrayBuffer).toString('base64');
 
     const response = await this.ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
       contents: createUserContent([
         `0-${resultCount} catogorie(s) for a SM post:\n` +
           `-format '<cate_1>,<0-1.0>|<cate_2>,<0-1.0>|...'(name w/ score)\n` +
-          `-lowercase, underscore as space between words, no extra response\n` +
+          `-lowercase, snake_case, no extra response\n` +
           `-name should be general enough->increase category hit chance\n` +
           `-less category (0-4) if generic/unclear, if none, no result` +
           // (mediaUrls.length > 0
           //   ? `-post contain media, categorize using those as well\n`
           // + `-Media URLs:\n${mediaUrls.join('\n')}`
           //     : '') +
-          `-post content: '${text}'`,
-        // `-post content: ${text.length > 0 ? `'${text}'` : 'none, only media'}`,
-        // {
-        //   inlineData: {
-        //     mimeType: 'image/png',
-        //     data: base64ImageData,
-        //   },
-        // },
+          // `-post content: '${text}'`,
+          `-post content: ${text.length > 0 ? `'${text}'` : 'none, only media'}`,
+        {
+          inlineData: {
+            mimeType: mediaUrls[0].includes('image')
+              ? 'image/png'
+              : 'video/mp4',
+            data: base64ImageData,
+          },
+        },
         // ...mediaUrls
         //   .filter((m) => !m.includes('.gif') && !m.includes('.mkv'))
         //   .map((url) => {
