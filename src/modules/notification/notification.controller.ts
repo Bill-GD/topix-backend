@@ -1,14 +1,25 @@
-import { ApiController, RequesterID } from '@/common/decorators';
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import {
+  ApiController,
+  RequesterID,
+  ResourceExistConfig,
+} from '@/common/decorators';
+import {
+  AuthenticatedGuard,
+  GetRequesterGuard,
+  ResourceExistGuard,
+} from '@/common/guards';
 import { CommonQuery } from '@/common/queries/common.query';
 import { ControllerResponse } from '@/common/utils/controller-response';
 import { addPaginateHeader } from '@/common/utils/helpers';
 import { SSEMessageEvent } from '@/common/utils/types';
+import { notificationTable } from '@/database/schemas';
 import { EventService } from '@/modules/notification/event.service';
 import {
   Controller,
+  Delete,
   Get,
   HttpStatus,
+  Param,
   Query,
   Res,
   Sse,
@@ -51,5 +62,17 @@ export class NotificationController {
   @Sse('sse')
   notifyUsers(): Observable<SSEMessageEvent> {
     return this.eventService.stream;
+  }
+
+  @Delete(':id')
+  @UseGuards(ResourceExistGuard)
+  @ResourceExistConfig({
+    name: 'Notification',
+    table: notificationTable,
+    resourceIdColumn: notificationTable.id,
+  })
+  async deleteNotification(@Param('id') id: string) {
+    const res = await this.notificationService.deleteNotification(id);
+    return ControllerResponse.ok(res.message, res.data, HttpStatus.OK);
   }
 }

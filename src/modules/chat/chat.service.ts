@@ -139,16 +139,23 @@ export class ChatService implements OnModuleInit {
   }
 
   async getAll(chatQuery: ChatQuery, requesterId: number) {
-    const lastMessage = this.db
-      .select({
-        channelId: chatMessageTable.channelId,
-        content: chatMessageTable.content,
-        sentAt: chatMessageTable.sentAt,
-      })
-      .from(chatMessageTable)
-      .orderBy(desc(chatMessageTable.sentAt))
-      .limit(1)
-      .as('last_message');
+    const lastTime = this.db
+        .select({
+          channelId: chatMessageTable.channelId,
+          time: sql<number>`(max(${chatMessageTable.sentAt}))`.as('time'),
+        })
+        .from(chatMessageTable)
+        .groupBy(chatMessageTable.channelId)
+        .as('last_message_time'),
+      lastMessage = this.db
+        .select({
+          channelId: chatMessageTable.channelId,
+          content: chatMessageTable.content,
+          sentAt: chatMessageTable.sentAt,
+        })
+        .from(chatMessageTable)
+        .innerJoin(lastTime, eq(lastTime.time, chatMessageTable.sentAt))
+        .as('last_message');
 
     const getLastSeen = this.db
         .select({

@@ -57,7 +57,7 @@ export class PostQuery extends CommonQuery {
   @Transform(({ value }) => (value as string).toLowerCase() === 'true')
   @IsBoolean()
   @IsOptional()
-  approved?: boolean;
+  approved: boolean = true;
 
   @ApiPropertyOptional()
   @IsOptionalString()

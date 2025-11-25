@@ -133,4 +133,9 @@ export class NotificationService {
       .set({ notificationLastSeenAt: sql`(now())` })
       .where(eq(userTable.id, userId));
   }
+
+  async deleteNotification(id: string) {
+    await this.db.delete(notificationTable).where(eq(notificationTable.id, id));
+    return Result.ok('Notification deleted successfully', null);
+  }
 }
