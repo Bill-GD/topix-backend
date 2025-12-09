@@ -1,4 +1,8 @@
-import { AuthenticatedGuard, GetRequesterGuard } from '@/common/guards';
+import {
+  AuthenticatedGuard,
+  GetRequesterGuard,
+  ResourceExistGuard,
+} from '@/common/guards';
 import { Result } from '@/common/utils/result';
 import { EventService } from '@/modules/notification/event.service';
 import { NotificationController } from '@/modules/notification/notification.controller';
@@ -13,7 +17,9 @@ import {
   applyGlobalEnhancers,
   defaultGuardMock,
   getGlobalModules,
+  mockDB,
   mockRequesterGuard,
+  resourceExistGuardMock,
 } from './test-helper';
 
 describe('Notification (e2e)', () => {
@@ -28,6 +34,8 @@ describe('Notification (e2e)', () => {
       .useValue(defaultGuardMock)
       .overrideGuard(GetRequesterGuard)
       .useValue(mockRequesterGuard(1, 'user'))
+      .overrideGuard(ResourceExistGuard)
+      .useValue(resourceExistGuardMock)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -105,6 +113,26 @@ describe('Notification (e2e)', () => {
         });
       };
     });
+  });
+
+  it(`DELETE '/notification/:id' returns 200 if exists`, async () => {
+    mockDB.$count.mockResolvedValue(1);
+    const delFunc = jest
+      .spyOn(notiService, 'deleteNotification')
+      .mockResolvedValue(Result.ok('Success', null));
+
+    await request(app.getHttpServer()).delete('/notification/0').expect(200);
+    expect(delFunc).toHaveBeenCalledWith('0');
+  });
+
+  it(`DELETE '/notification/:id' returns 404 if doesn't exist`, async () => {
+    mockDB.$count.mockResolvedValue(0);
+    const delFunc = jest
+      .spyOn(notiService, 'deleteNotification')
+      .mockResolvedValue(Result.ok('Success', null));
+
+    await request(app.getHttpServer()).delete('/notification/0').expect(404);
+    expect(delFunc).not.toHaveBeenCalled();
   });
 
   afterAll(async () => await app.close());

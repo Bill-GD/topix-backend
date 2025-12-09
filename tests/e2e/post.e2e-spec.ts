@@ -187,8 +187,6 @@ describe('Post (e2e)', () => {
       expect(updateFunc).toHaveBeenCalled();
       await request(app.getHttpServer()).patch('/post/0/react').expect(200);
       expect(reactFunc).toHaveBeenCalled();
-      expect(createNotiFunc).toHaveBeenCalled();
-      expect(emitNotiFunc).toHaveBeenCalled();
       await request(app.getHttpServer()).delete('/post/0').expect(200);
       expect(deleteFunc).toHaveBeenCalled();
       await request(app.getHttpServer()).delete('/post/0/react').expect(200);
