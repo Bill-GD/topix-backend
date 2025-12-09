@@ -58,9 +58,8 @@ export class AuthController {
   @UseGuards(AccountInfoGuard)
   @AccountInfoConfig({ shouldExist: false, checks: ['username', 'email'] })
   async register(@Body() dto: RegisterDto) {
-    if (dto.password !== dto.confirmPassword) {
-      throw new BadRequestException('Provided passwords do not match.');
-    }
+    const valResult = await this.authService.validateRegistration(dto);
+    if (!valResult.success) throw new BadRequestException(valResult.message);
 
     const newId = await this.authService.register(dto);
 

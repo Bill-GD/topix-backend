@@ -19,6 +19,23 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  async validateRegistration(dto: RegisterDto): Promise<Result<null>> {
+    if (dto.password !== dto.confirmPassword) {
+      return Result.fail('Provided passwords do not match.');
+    }
+
+    const existingCount = await this.db.$count(
+      userTable,
+      eq(userTable.email, dto.email),
+    );
+
+    if (existingCount > 0) {
+      return Result.fail('Email is already in use.');
+    }
+
+    return Result.ok('Registration info validated', null);
+  }
+
   async register(dto: RegisterDto): Promise<number> {
     dto.password = this.crypto.hashPassword(dto.password);
 
