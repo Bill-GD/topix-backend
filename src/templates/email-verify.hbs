@@ -1,9 +1,54 @@
 <html>
-  <div style="font-family: Arial, sans-serif">
-    <p>Hello {{username}},</p>
-    <p>Please use this code to verify your email: {{otp}}</p>
-    <br>
-    <p>This code should be available for only 5 minutes.</p>
-    <p>If you missed the time period, you can request a new code.</p>
-  </div>
+  <body style="margin:0; padding:0; background-color:#f4f6f8;">
+    <div style="
+      max-width:600px;
+      margin:40px auto;
+      padding:24px;
+      background-color:#ffffff;
+      font-family:Arial, Helvetica, sans-serif;
+      color:#333333;
+      border-radius:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    ">
+      <h2 style="margin-top:0; color:#222222;">
+        Email Verification
+      </h2>
+
+      <p style="font-size:14px; line-height:1.6;">
+        Hello <strong>{{username}}</strong>,
+      </p>
+
+      <p style="font-size:14px; line-height:1.6;">
+        Please use the following code to verify your email address:
+      </p>
+
+      <div style="
+        margin:24px 0;
+        padding:16px;
+        text-align:center;
+        font-size:24px;
+        font-weight:bold;
+        letter-spacing:4px;
+        background-color:#f0f4ff;
+        color:#2b4eff;
+        border-radius:6px;
+      ">
+        {{otp}}
+      </div>
+
+      <p style="font-size:13px; line-height:1.6; color:#555555;">
+        This code is valid for <strong>5 minutes</strong>.
+      </p>
+
+      <p style="font-size:13px; line-height:1.6; color:#555555;">
+        If the code expires, you can request a new one from the app.
+      </p>
+
+      <hr style="border:none; border-top:1px solid #e5e7eb; margin:24px 0;">
+
+      <p style="font-size:12px; color:#888888;">
+        If you didn’t request this verification, you can safely ignore this email.
+      </p>
+    </div>
+  </body>
 </html>
