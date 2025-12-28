@@ -21,7 +21,8 @@
     "test:e2e": "jest --config tests/e2e/jest-e2e.json",
     "schema:export": "node src/database/scripts/make.js && drizzle-kit export > src/database/migrations/initial_script.sql && node src/database/scripts/clean-schema.js",
     "schema:gen": "drizzle-kit generate",
-    "schema:migrate": "drizzle-kit generate && drizzle-kit migrate"
+    "schema:migrate": "drizzle-kit generate && drizzle-kit migrate",
+    "docker:build": "docker build -q -t topix-backend ."
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

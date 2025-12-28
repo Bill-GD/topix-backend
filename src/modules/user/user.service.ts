@@ -39,6 +39,7 @@ export class UserService {
     const users = await this.db
       .select({
         id: userTable.id,
+        email: userTable.email,
         username: userTable.username,
         displayName: profileTable.displayName,
         profilePicture: profileTable.profilePicture,
@@ -57,6 +58,7 @@ export class UserService {
     const [user] = await this.db
       .select({
         id: userTable.id,
+        email: userTable.email,
         username: userTable.username,
         displayName: profileTable.displayName,
         profilePicture: profileTable.profilePicture,
@@ -73,6 +75,7 @@ export class UserService {
     const [user] = await this.db
       .select({
         id: userTable.id,
+        email: userTable.email,
         username: userTable.username,
         displayName: profileTable.displayName,
         description: profileTable.description,
